@@ -3,6 +3,8 @@
 [![no-std](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/nostd.yml/badge.svg)](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/nostd.yml)
 [![check](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/check.yml/badge.svg)](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/check.yml)
 [![rolling](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/rolling.yml/badge.svg)](https://github.com/OpenDevicePartnership/tmp108/actions/workflows/rolling.yml)
+[![crates.io](https://img.shields.io/crates/v/tmp108.svg)](https://crates.io/crates/tmp108)
+[![Documentation](https://docs.rs/tmp108/badge.svg)](https://docs.rs/tmp108)
 [![LICENSE](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 A `#[no_std]` platform-agnostic driver for the
