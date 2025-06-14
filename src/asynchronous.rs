@@ -470,8 +470,8 @@ mod tests {
     #[tokio::test]
     async fn read_write_configuration_register() {
         let expectations = vec![
-            Transaction::write_read(0x48, vec![0x01], vec![0x10, 0x22]),
-            Transaction::write(0x48, vec![0x01, 0xb0, 0xfe]),
+            Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+            Transaction::write(0x48, vec![0x01, 0xfe, 0xb0]),
         ];
 
         let mock = Mock::new(&expectations);
@@ -507,10 +507,10 @@ mod tests {
 
         // Sensor i2c bus mocks and expectations
         let i2c_expectations = vec![
-            Transaction::write(0x48, vec![0x01, 0x10, 0x26]),
+            Transaction::write(0x48, vec![0x01, 0x26, 0x10]),
             Transaction::write(0x48, vec![0x02, 0x19, 0x00]),
             Transaction::write(0x48, vec![0x03, 0x50, 0x00]),
-            Transaction::write_read(0x48, vec![0x01], vec![0x10, 0x26]),
+            Transaction::write_read(0x48, vec![0x01], vec![0x26, 0x10]),
             Transaction::write_read(0x48, vec![0x00], vec![0x50, 0x00]),
         ];
         let i2c_mock = Mock::new(&i2c_expectations);

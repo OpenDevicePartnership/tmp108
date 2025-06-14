@@ -47,6 +47,16 @@ pub struct LowLimit(u16);
 #[bitsize(16)]
 #[derive(DebugBits, FromBits, PartialEq, Clone, Copy)]
 pub struct Configuration {
+    reserved0_3: u4,
+
+    /// Hysteresis control.
+    pub hysteresis: Hysteresis,
+
+    reserved6: bool,
+
+    /// Polarity
+    pub polarity: Polarity,
+
     /// Conversion mode
     pub cm: ConversionMode,
 
@@ -64,21 +74,11 @@ pub struct Configuration {
 
     /// ID bit
     pub id: bool,
-
-    reserved0_3: u4,
-
-    /// Hysteresis control.
-    pub hysteresis: Hysteresis,
-
-    reserved6: bool,
-
-    /// Polarity
-    pub polarity: Polarity,
 }
 
 impl Default for Configuration {
     fn default() -> Self {
-        Self::from(0b0001_0000_0010_0010)
+        Self::from(0b0010_0010_0001_0000)
     }
 }
 
@@ -222,54 +222,54 @@ mod tests {
     #[test]
     fn default_configuration() {
         let cfg = Configuration::default();
-        assert_eq!(cfg.value, 0x1022);
+        assert_eq!(cfg.value, 0x2210);
     }
 
     #[test]
     fn modify_conversion_mode() {
         let cfg = Configuration::default().with_cm(ConversionMode::Shutdown);
-        assert_eq!(cfg.value, 0x1020);
+        assert_eq!(cfg.value, 0x2010);
     }
 
     #[test]
     fn modify_thermostat_mode() {
         let cfg = Configuration::default().with_tm(ThermostatMode::Interrupt);
-        assert_eq!(cfg.value, 0x1026);
+        assert_eq!(cfg.value, 0x2610);
     }
 
     #[test]
     fn modify_flag_low() {
         let cfg = Configuration::default().with_fl(true);
-        assert_eq!(cfg.value, 0x102a);
+        assert_eq!(cfg.value, 0x2a10);
     }
 
     #[test]
     fn modify_flag_high() {
         let cfg = Configuration::default().with_fh(true);
-        assert_eq!(cfg.value, 0x1032);
+        assert_eq!(cfg.value, 0x3210);
     }
 
     #[test]
     fn modify_conversion_rate() {
         let cfg = Configuration::default().with_cr(ConversionRate::Hertz16);
-        assert_eq!(cfg.value, 0x1062);
+        assert_eq!(cfg.value, 0x6210);
     }
 
     #[test]
     fn modify_id() {
         let cfg = Configuration::default().with_id(true);
-        assert_eq!(cfg.value, 0x10a2);
+        assert_eq!(cfg.value, 0xa210);
     }
 
     #[test]
     fn modify_hysteresis() {
         let cfg = Configuration::default().with_hysteresis(Hysteresis::FourCelsius);
-        assert_eq!(cfg.value, 0x3022);
+        assert_eq!(cfg.value, 0x2230);
     }
 
     #[test]
     fn modify_polarity() {
         let cfg = Configuration::default().with_polarity(Polarity::ActiveHigh);
-        assert_eq!(cfg.value, 0x9022);
+        assert_eq!(cfg.value, 0x2290);
     }
 }

@@ -323,8 +323,8 @@ mod tests {
     #[test]
     fn read_write_configuration_register() {
         let expectations = vec![
-            Transaction::write_read(0x48, vec![0x01], vec![0x10, 0x22]),
-            Transaction::write(0x48, vec![0x01, 0xb0, 0xfe]),
+            Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+            Transaction::write(0x48, vec![0x01, 0xfe, 0xb0]),
         ];
 
         let mock = Mock::new(&expectations);
