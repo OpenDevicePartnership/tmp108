@@ -303,19 +303,19 @@ mod tests {
             vec![Transaction::write_read(0x48, vec![0x00], vec![0xe7, 0x00])],
             vec![Transaction::write_read(0x48, vec![0x00], vec![0xc9, 0x00])],
         ];
-        let temps = vec![127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+        let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
 
         for (e, t) in expectations.iter().zip(temps.iter()) {
             let mock = Mock::new(e);
             let delay = NoopDelay::new();
-            let mut tmp = Tmp108::new_blocking_with_a0_gnd(mock, delay);
-            let result = tmp.temperature();
+            let mut tmp108 = Tmp108::new_blocking_with_a0_gnd(mock, delay);
+            let result = tmp108.temperature();
             assert!(result.is_ok());
 
             let temp = result.unwrap();
             assert_approx_eq!(temp, *t, 1e-4);
 
-            let mut mock = tmp.destroy();
+            let mut mock = tmp108.destroy();
             mock.done();
         }
     }
@@ -334,7 +334,7 @@ mod tests {
         assert!(result.is_ok());
 
         let cfg = result.unwrap();
-        assert_eq!(cfg, Default::default());
+        assert_eq!(cfg, Configuration::default());
 
         let cfg = cfg
             .with_cm(ConversionMode::Continuous)
