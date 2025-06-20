@@ -4,9 +4,11 @@ use core::future::Future;
 #[cfg(feature = "embedded-sensors-hal-async")]
 use embedded_sensors_hal_async::sensor;
 #[cfg(feature = "embedded-sensors-hal-async")]
-use embedded_sensors_hal_async::temperature::{DegreesCelsius, TemperatureSensor, TemperatureThresholdWait};
+use embedded_sensors_hal_async::temperature::{
+    DegreesCelsius, TemperatureHysteresis, TemperatureSensor, TemperatureThresholdSet, TemperatureThresholdWait,
+};
 
-use super::{Configuration, ConversionMode, ConversionRate, Polarity, Register, ThermostatMode, A0};
+use super::{Configuration, ConversionMode, ConversionRate, Hysteresis, Polarity, Register, ThermostatMode, A0};
 
 /// TMP108 asynchronous device driver
 pub struct Tmp108<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayNs> {
@@ -244,6 +246,8 @@ impl<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayN
 pub enum Error<E: embedded_hal_async::i2c::Error> {
     /// I2C Bus Error
     Bus(E),
+    /// Invalid Input Error
+    InvalidInput,
     /// Other Error
     Other,
 }
@@ -251,7 +255,11 @@ pub enum Error<E: embedded_hal_async::i2c::Error> {
 #[cfg(feature = "embedded-sensors-hal-async")]
 impl<E: embedded_hal_async::i2c::Error> sensor::Error for Error<E> {
     fn kind(&self) -> sensor::ErrorKind {
-        sensor::ErrorKind::Other
+        match *self {
+            Self::Bus(_) => sensor::ErrorKind::Peripheral,
+            Self::InvalidInput => sensor::ErrorKind::InvalidInput,
+            Self::Other => sensor::ErrorKind::Other,
+        }
     }
 }
 
@@ -268,6 +276,45 @@ impl<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayN
 {
     async fn temperature(&mut self) -> Result<DegreesCelsius, Self::Error> {
         self.temperature().await.map_err(Error::Bus)
+    }
+}
+
+#[cfg(feature = "embedded-sensors-hal-async")]
+impl<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayNs> TemperatureThresholdSet
+    for Tmp108<I2C, DELAY>
+{
+    async fn set_temperature_threshold_low(&mut self, threshold: DegreesCelsius) -> Result<(), Self::Error> {
+        self.set_low_limit(threshold).await.map_err(Error::Bus)
+    }
+
+    async fn set_temperature_threshold_high(&mut self, threshold: DegreesCelsius) -> Result<(), Self::Error> {
+        self.set_high_limit(threshold).await.map_err(Error::Bus)
+    }
+}
+
+#[cfg(feature = "embedded-sensors-hal-async")]
+impl<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayNs> TemperatureHysteresis
+    for Tmp108<I2C, DELAY>
+{
+    async fn set_temperature_threshold_hysteresis(&mut self, hysteresis: DegreesCelsius) -> Result<(), Self::Error> {
+        /* Trait method takes a continuous range of f32 values as argument,
+         * but internally driver only accepts 4 discrete values for hysteresis.
+         * We ensure only a correct value for hysteresis is passed in, and return error otherwise.
+         */
+        let hysteresis = if (hysteresis - 0.0).abs() < f32::EPSILON {
+            Hysteresis::ZeroCelsius
+        } else if (hysteresis - 1.0).abs() < f32::EPSILON {
+            Hysteresis::OneCelsius
+        } else if (hysteresis - 2.0).abs() < f32::EPSILON {
+            Hysteresis::TwoCelsius
+        } else if (hysteresis - 4.0).abs() < f32::EPSILON {
+            Hysteresis::FourCelsius
+        } else {
+            return Err(Error::InvalidInput);
+        };
+
+        let config = self.config.with_hysteresis(hysteresis);
+        self.set_configuration(config).await.map_err(Error::Bus)
     }
 }
 
@@ -353,7 +400,7 @@ impl<
         I2C: embedded_hal_async::i2c::I2c,
         DELAY: embedded_hal_async::delay::DelayNs,
         ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin,
-    > TemperatureThresholdWait for AlertTmp108<I2C, DELAY, ALERT>
+    > TemperatureThresholdSet for AlertTmp108<I2C, DELAY, ALERT>
 {
     async fn set_temperature_threshold_low(&mut self, threshold: DegreesCelsius) -> Result<(), Self::Error> {
         self.tmp108.set_low_limit(threshold).await.map_err(Error::Bus)
@@ -362,7 +409,15 @@ impl<
     async fn set_temperature_threshold_high(&mut self, threshold: DegreesCelsius) -> Result<(), Self::Error> {
         self.tmp108.set_high_limit(threshold).await.map_err(Error::Bus)
     }
+}
 
+#[cfg(feature = "embedded-sensors-hal-async")]
+impl<
+        I2C: embedded_hal_async::i2c::I2c,
+        DELAY: embedded_hal_async::delay::DelayNs,
+        ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin,
+    > TemperatureThresholdWait for AlertTmp108<I2C, DELAY, ALERT>
+{
     async fn wait_for_temperature_threshold(&mut self) -> Result<DegreesCelsius, Self::Error> {
         match (self.tmp108.config.tm(), self.tmp108.config.polarity()) {
             // In comparator mode, the ALERT pin remains active even after triggering.
@@ -390,6 +445,18 @@ impl<
         // Return temperature at time of trigger for caller to determine which threshold was crossed.
         let temperature = self.tmp108.temperature().await.map_err(Error::Bus)?;
         Ok(temperature)
+    }
+}
+
+#[cfg(feature = "embedded-sensors-hal-async")]
+impl<
+        I2C: embedded_hal_async::i2c::I2c,
+        DELAY: embedded_hal_async::delay::DelayNs,
+        ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin,
+    > TemperatureHysteresis for AlertTmp108<I2C, DELAY, ALERT>
+{
+    async fn set_temperature_threshold_hysteresis(&mut self, hysteresis: DegreesCelsius) -> Result<(), Self::Error> {
+        self.tmp108.set_temperature_threshold_hysteresis(hysteresis).await
     }
 }
 
