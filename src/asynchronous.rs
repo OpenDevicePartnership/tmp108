@@ -8,7 +8,9 @@ use embedded_sensors_hal_async::temperature::{
     DegreesCelsius, TemperatureHysteresis, TemperatureSensor, TemperatureThresholdSet, TemperatureThresholdWait,
 };
 
-use super::{Configuration, ConversionMode, ConversionRate, Hysteresis, Polarity, Register, ThermostatMode, A0};
+use super::{Configuration, ConversionMode, ConversionRate, Hysteresis, Register, A0};
+#[cfg(feature = "embedded-sensors-hal-async")]
+use super::{Polarity, ThermostatMode};
 
 /// TMP108 asynchronous device driver
 pub struct Tmp108<I2C: embedded_hal_async::i2c::I2c, DELAY: embedded_hal_async::delay::DelayNs> {
@@ -517,19 +519,19 @@ mod tests {
             vec![Transaction::write_read(0x48, vec![0x00], vec![0xe7, 0x00])],
             vec![Transaction::write_read(0x48, vec![0x00], vec![0xc9, 0x00])],
         ];
-        let temps = vec![127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+        let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
 
         for (e, t) in expectations.iter().zip(temps.iter()) {
             let mock = Mock::new(e);
             let delay = NoopDelay::new();
-            let mut tmp = Tmp108::new_async_with_a0_gnd(mock, delay).await;
-            let result = tmp.temperature().await;
+            let mut tmp108 = Tmp108::new_async_with_a0_gnd(mock, delay).await;
+            let result = tmp108.temperature().await;
             assert!(result.is_ok());
 
             let temp = result.unwrap();
             assert_approx_eq!(temp, *t, 1e-4);
 
-            let mut mock = tmp.destroy();
+            let mut mock = tmp108.destroy();
             mock.done();
         }
     }
@@ -548,7 +550,7 @@ mod tests {
         assert!(result.is_ok());
 
         let cfg = result.unwrap();
-        assert_eq!(cfg, Default::default());
+        assert_eq!(cfg, Configuration::default());
 
         let cfg = cfg
             .with_cm(ConversionMode::Continuous)
@@ -588,28 +590,28 @@ mod tests {
         let pin_mock = digital::Mock::new(&pin_expectations);
 
         // Create a ALERTTMP108 instance and configure it as active-low interrupt mode
-        let mut tmp = AlertTmp108::new_async_with_a0_gnd(i2c_mock, delay, pin_mock).await;
+        let mut tmp108 = AlertTmp108::new_async_with_a0_gnd(i2c_mock, delay, pin_mock).await;
         let cfg = Configuration::default()
             .with_tm(ThermostatMode::Interrupt)
             .with_polarity(Polarity::ActiveLow);
-        let result = tmp.tmp108.set_configuration(cfg).await;
+        let result = tmp108.tmp108.set_configuration(cfg).await;
         assert!(result.is_ok());
 
         // Set alert thresholds
-        let result = tmp.set_temperature_threshold_low(25.0).await;
+        let result = tmp108.set_temperature_threshold_low(25.0).await;
         assert!(result.is_ok());
-        let result = tmp.set_temperature_threshold_high(80.0).await;
+        let result = tmp108.set_temperature_threshold_high(80.0).await;
         assert!(result.is_ok());
 
         // Ensure alert pin waits for a falling edge
-        let result = tmp.wait_for_temperature_threshold().await;
+        let result = tmp108.wait_for_temperature_threshold().await;
         assert!(result.is_ok());
 
         // Check that recently sampled temperature is returned
         let temp = result.unwrap();
         assert_approx_eq!(temp, 80.0, 1e-4);
 
-        let (mut i2c_mock, mut pin_mock) = tmp.destroy();
+        let (mut i2c_mock, mut pin_mock) = tmp108.destroy();
         i2c_mock.done();
         pin_mock.done();
     }
