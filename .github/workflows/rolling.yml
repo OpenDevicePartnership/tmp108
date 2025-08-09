@@ -28,14 +28,14 @@ jobs:
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       - name: cargo check
-        run: cargo check -F full
+        run: cargo check -F full --locked
 
   msrv:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        msrv: ["1.83"] # We're relying on namespaced-features, which
+        msrv: ["1.84"] # We're relying on namespaced-features, which
                        # was released in 1.60
                        #
                        # We also depend on `fixed' which requires rust
@@ -48,6 +48,8 @@ jobs:
                        # collapse_debuginfo
                        #
                        # embassy upstream switched to rust 1.83
+                       #
+                       # f32::abs moved to core from std
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
@@ -58,4 +60,4 @@ jobs:
         with:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
-        run: cargo check -F full
+        run: cargo check -F full --locked
