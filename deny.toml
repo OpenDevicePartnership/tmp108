@@ -230,7 +230,7 @@ allow-git = []
 
 [sources.allow-org]
 # github.com organizations to allow git sources for
-github = ["OpenDevicePartnership"]
+github = []
 # gitlab.com organizations to allow git sources for
 gitlab = []
 # bitbucket.org organizations to allow git sources for
