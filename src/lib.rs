@@ -141,7 +141,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         self.inner.interface.i2c
     }
 
-    /// Create a new AlertTmp108 instance by consuming the original Tmp108 instance.
+    /// Create a new `AlertTmp108` instance by consuming the original Tmp108 instance.
     #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
     pub fn into_alert<ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin>(
         self,
@@ -921,9 +921,13 @@ mod tests {
 
             // Create a ALERTTMP108 instance and configure it as active-low interrupt mode
             let mut tmp108 = AlertTmp108::new_with_a0_gnd(i2c_mock, pin_mock);
-            let mut cfg = Config::default();
-            cfg.thermostat_mode = Thermostat::Interrupt;
-            cfg.alert_polarity = Polarity::ActiveLow;
+
+            let cfg = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveLow,
+                ..Default::default()
+            };
+
             let result = tmp108.tmp108.configure(cfg).await;
             assert!(result.is_ok());
 
