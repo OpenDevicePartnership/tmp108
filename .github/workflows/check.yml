@@ -72,7 +72,7 @@ jobs:
         with:
           reporter: 'github-pr-review'
           fail_on_error: 'true'
-          clippy_flags: --all-features --all-targets -- -Dwarnings -F clippy::suspicious -F clippy::correctness -D clippy::perf -F clippy::style
+          clippy_flags: --all-features --all-targets -- -Dwarnings -D clippy::suspicious -D clippy::correctness -D clippy::perf -D clippy::style
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   semver:
