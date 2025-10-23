@@ -73,7 +73,7 @@ tmp.continuous(Default::default(), |t| {
 
 ## MSRV
 
-Currently, rust `1.79` and up is supported, but some previous versions
+Currently, rust `1.85` and up is supported, but some previous versions
 may work.
 
 ## License

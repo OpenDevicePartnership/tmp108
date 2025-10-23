@@ -17,7 +17,7 @@ include = [
 	"/LICENSE",
 ]
 edition = "2024"
-rust-version = "1.84.0"
+rust-version = "1.85.0"
 
 [dependencies]
 device-driver = { version = "1.0.7", default-features = false, features = ["toml"] }

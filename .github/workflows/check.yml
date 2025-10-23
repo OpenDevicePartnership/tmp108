@@ -162,7 +162,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        msrv: ["1.84"] # We're relying on namespaced-features, which
+        msrv: ["1.85"] # We're relying on namespaced-features, which
                        # was released in 1.60
                        #
                        # We also depend on `fixed' which requires rust
@@ -177,6 +177,8 @@ jobs:
                        # embassy upstream switched to rust 1.83
                        #
                        # f32::abs moved to core from std
+                       #
+                       # need edition 2024
 
     name: ubuntu / ${{ matrix.msrv }}
     steps:
