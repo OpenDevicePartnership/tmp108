@@ -901,8 +901,7 @@ mod tests {
         #[tokio::test]
         async fn handle_threshold_alerts_properly() {
             use embedded_hal_mock::eh1::digital;
-            use embedded_sensors_hal_async::temperature::TemperatureThresholdSet;
-            use embedded_sensors_hal_async::temperature::TemperatureThresholdWait;
+            use embedded_sensors_hal_async::temperature::{TemperatureThresholdSet, TemperatureThresholdWait};
 
             // Sensor i2c bus mocks and expectations
             let i2c_expectations = vec![
