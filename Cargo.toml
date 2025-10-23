@@ -35,7 +35,6 @@ embedded-sensors-hal-async = [ "dep:embedded-sensors-hal-async" ]
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
 embedded-hal-mock = { version = "0.11.1", features = [ "embedded-hal-async" ] }
-pico-de-gallo-hal = "0.1.0"
 tokio = { version = "1.47.0", features = ["rt", "macros", "rt-multi-thread", "time"] }
 
 [lints.rust]
