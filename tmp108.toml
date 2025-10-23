@@ -1,0 +1,115 @@
+[config]
+register_address_type = "u8"
+default_byte_order = "LE"
+name_word_boundaries = ["Hyphen"]
+
+[temperature]
+type = "register"
+address = 0
+size_bits = 16
+access = "RO"
+description = "Temperature register"
+
+[configuration]
+type = "register"
+address = 1
+size_bits = 16
+access = "RW"
+reset_value = 0x1022
+description = "Configuration register"
+
+[configuration.fields.m]
+description = "Device functional mode"
+base = "uint"
+start = 0
+end = 2
+
+[configuration.fields.m.try_conversion]
+name = "Mode"
+description = "Device functional mode"
+shutdown = 0
+one-shot = 1
+continuous = 2
+
+[configuration.fields.tm]
+description = "Thermostat mode"
+base = "uint"
+start = 2
+end = 3
+
+[configuration.fields.tm.conversion]
+name = "Thermostat"
+description = "Thermostat mode"
+comparator = 0
+interrupt = 1
+
+[configuration.fields.fl]
+description = "Temperature watchdog low flag"
+base = "bool"
+start = 3
+end = 4
+
+[configuration.fields.fh]
+description = "Temperature watchdog high flag"
+base = "bool"
+start = 4
+end = 5
+
+[configuration.fields.cr]
+description = "Conversion rate"
+base = "uint"
+start = 5
+end = 7
+
+[configuration.fields.cr.conversion]
+name = "conversion-rate"
+description = "Conversion rate"
+_0_25-hz = 0
+_1-hz = 1
+_4-hz = 2
+_16-hz = 3
+
+[configuration.fields.id]
+description = "ID"
+base = "bool"
+start = 7
+end = 8
+
+[configuration.fields.hys]
+description = "Hysteresis control"
+base = "uint"
+start = 12
+end = 14
+
+[configuration.fields.hys.conversion]
+name = "hysteresis"
+_0-C = 0
+_1-C = 1
+_2-C = 2
+_4-C = 3
+
+[configuration.fields.pol]
+description = "ALERT pin polarity"
+base = "uint"
+start = 15
+end = 16
+
+[configuration.fields.pol.conversion]
+name = "polarity"
+active-low = 0
+active-high = 1
+
+[t-low]
+type = "register"
+address = 2
+size_bits = 16
+access = "RW"
+description = "Temperature high register"
+
+[t-high]
+type = "register"
+address = 3
+size_bits = 16
+access = "RW"
+description = "Temperature high register"
+

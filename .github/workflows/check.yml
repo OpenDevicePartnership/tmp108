@@ -209,5 +209,11 @@ jobs:
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: cargo test
+      - name: cargo test (blocking)
         run: cargo test --locked
+
+      - name: cargo test (async)
+        run: cargo test --locked -F async
+
+      - name: cargo test (embedded-sensors-hal)
+        run: cargo test --locked -F async,embedded-sensors-hal-async
