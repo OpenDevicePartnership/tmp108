@@ -24,7 +24,8 @@ use embedded_hal::{delay::DelayNs, i2c::I2c};
 #[cfg(feature = "async")]
 use embedded_hal_async::{delay::DelayNs as AsyncDelayNs, i2c::I2c as AsyncI2c};
 
-#[allow(unused, unsafe_code)]
+// inner is auto-generated, we don't want build to fail because of auto-generated code.
+#[allow(unused, unsafe_code, clippy::all)]
 mod inner;
 
 use crate::inner::field_sets::{THigh, TLow};
