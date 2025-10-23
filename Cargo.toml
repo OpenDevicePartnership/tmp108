@@ -42,8 +42,8 @@ unsafe_code = "deny"
 missing_docs = "deny"
 
 [lints.clippy]
-correctness = "forbid"
-suspicious = "forbid"
-perf = "forbid"
+correctness = "deny"
+suspicious = "deny"
+perf = "deny"
 style = "deny"
 pedantic = "deny"
