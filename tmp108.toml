@@ -104,7 +104,7 @@ type = "register"
 address = 2
 size_bits = 16
 access = "RW"
-description = "Temperature high register"
+description = "Temperature low register"
 
 [t-high]
 type = "register"

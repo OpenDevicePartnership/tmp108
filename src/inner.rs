@@ -132,7 +132,7 @@ impl<I> Inner<I> {
         )
     }
 
-    /// Temperature high register
+    /// Temperature low register
 
     pub fn t_low(&mut self) -> ::device_driver::RegisterOperation<'_, I, u8, field_sets::TLow, ::device_driver::RW> {
         let address = self.base_address + 2;
@@ -558,7 +558,7 @@ pub mod field_sets {
         }
     }
 
-    /// Temperature high register
+    /// Temperature low register
 
     #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct TLow {
@@ -786,7 +786,7 @@ pub mod field_sets {
         /// Configuration register
         Configuration(Configuration),
 
-        /// Temperature high register
+        /// Temperature low register
         TLow(TLow),
 
         /// Temperature high register
