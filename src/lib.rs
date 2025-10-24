@@ -32,9 +32,10 @@ use crate::inner::field_sets::{THigh, TLow};
 use crate::inner::{ConversionRate, Hysteresis, Inner, Mode, Polarity, Thermostat};
 
 /// A0 pin logic level representation.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum A0 {
     /// A0 tied to GND (default).
+    #[default]
     Gnd,
     /// A0 tied to V+.
     Vplus,
@@ -42,12 +43,6 @@ pub enum A0 {
     Sda,
     /// A0 tied to SCL.
     Scl,
-}
-
-impl Default for A0 {
-    fn default() -> Self {
-        Self::Gnd
-    }
 }
 
 impl From<A0> for u8 {
