@@ -793,6 +793,43 @@ mod tests {
         }
 
         #[test]
+        fn change_configuration() {
+            let expectations = vec![
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x66, 0xb0]),
+                Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0]),
+            ];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let result = tmp108.read_configuration();
+            assert!(result.is_ok());
+
+            let config = result.unwrap();
+            assert_eq!(config, Config::default());
+
+            let config = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveHigh,
+                conversion_rate: ConversionRate::_16Hz,
+                hysteresis: Hysteresis::_4C,
+            };
+
+            let result = tmp108.configure(config);
+            assert!(result.is_ok());
+
+            let result = tmp108.read_configuration();
+            assert!(result.is_ok());
+
+            let new_config = result.unwrap();
+            assert_eq!(config, new_config);
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[test]
         fn read_temperature_default_address() {
             let expectations = vec![
                 vec![Transaction::write_read(0x48, vec![0x00], vec![0xf0, 0x7f])],
@@ -821,6 +858,98 @@ mod tests {
                 let mut mock = tmp108.destroy();
                 mock.done();
             }
+        }
+
+        #[test]
+        fn set_and_read_low_limit() {
+            let expectations = vec![
+                Transaction::write(0x48, vec![0x02, 0xf0, 0x7f]),
+                Transaction::write_read(0x48, vec![0x02], vec![0xf0, 0x7f]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x64]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x64]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x50]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x50]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x4b]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x4b]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x32]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x32]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x19]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x19]),
+                Transaction::write(0x48, vec![0x02, 0x40, 0x00]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x40, 0x00]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x00]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x00]),
+                Transaction::write(0x48, vec![0x02, 0xc0, 0xff]),
+                Transaction::write_read(0x48, vec![0x02], vec![0xc0, 0xff]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0xe7]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0xe7]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0xc9]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0xc9]),
+            ];
+            let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for t in &temps {
+                let result = tmp108.set_low_limit(*t);
+                assert!(result.is_ok());
+
+                let result = tmp108.low_limit();
+                assert!(result.is_ok());
+
+                let temp = result.unwrap();
+                assert_approx_eq!(temp, *t, 1e-4);
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[test]
+        fn set_and_read_high_limit() {
+            let expectations = vec![
+                Transaction::write(0x48, vec![0x03, 0xf0, 0x7f]),
+                Transaction::write_read(0x48, vec![0x03], vec![0xf0, 0x7f]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x64]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x64]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x50]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x50]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x4b]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x4b]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x32]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x32]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x19]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x19]),
+                Transaction::write(0x48, vec![0x03, 0x40, 0x00]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x40, 0x00]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x00]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x00]),
+                Transaction::write(0x48, vec![0x03, 0xc0, 0xff]),
+                Transaction::write_read(0x48, vec![0x03], vec![0xc0, 0xff]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0xe7]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0xe7]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0xc9]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0xc9]),
+            ];
+            let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for t in &temps {
+                let result = tmp108.set_high_limit(*t);
+                assert!(result.is_ok());
+
+                let result = tmp108.high_limit();
+                assert!(result.is_ok());
+
+                let temp = result.unwrap();
+                assert_approx_eq!(temp, *t, 1e-4);
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
         }
     }
 
@@ -861,6 +990,43 @@ mod tests {
         }
 
         #[tokio::test]
+        async fn change_configuration() {
+            let expectations = vec![
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x66, 0xb0]),
+                Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0]),
+            ];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let result = tmp108.read_configuration().await;
+            assert!(result.is_ok());
+
+            let config = result.unwrap();
+            assert_eq!(config, Config::default());
+
+            let config = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveHigh,
+                conversion_rate: ConversionRate::_16Hz,
+                hysteresis: Hysteresis::_4C,
+            };
+
+            let result = tmp108.configure(config).await;
+            assert!(result.is_ok());
+
+            let result = tmp108.read_configuration().await;
+            assert!(result.is_ok());
+
+            let new_config = result.unwrap();
+            assert_eq!(config, new_config);
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
         async fn read_temperature_default_address() {
             let expectations = vec![
                 vec![Transaction::write_read(0x48, vec![0x00], vec![0xf0, 0x7f])],
@@ -889,6 +1055,98 @@ mod tests {
                 let mut mock = tmp108.destroy();
                 mock.done();
             }
+        }
+
+        #[tokio::test]
+        async fn set_and_read_high_limit() {
+            let expectations = vec![
+                Transaction::write(0x48, vec![0x03, 0xf0, 0x7f]),
+                Transaction::write_read(0x48, vec![0x03], vec![0xf0, 0x7f]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x64]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x64]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x50]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x50]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x4b]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x4b]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x32]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x32]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x19]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x19]),
+                Transaction::write(0x48, vec![0x03, 0x40, 0x00]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x40, 0x00]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0x00]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0x00]),
+                Transaction::write(0x48, vec![0x03, 0xc0, 0xff]),
+                Transaction::write_read(0x48, vec![0x03], vec![0xc0, 0xff]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0xe7]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0xe7]),
+                Transaction::write(0x48, vec![0x03, 0x00, 0xc9]),
+                Transaction::write_read(0x48, vec![0x03], vec![0x00, 0xc9]),
+            ];
+            let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for t in &temps {
+                let result = tmp108.set_high_limit(*t).await;
+                assert!(result.is_ok());
+
+                let result = tmp108.high_limit().await;
+                assert!(result.is_ok());
+
+                let temp = result.unwrap();
+                assert_approx_eq!(temp, *t, 1e-4);
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn set_and_read_low_limit() {
+            let expectations = vec![
+                Transaction::write(0x48, vec![0x02, 0xf0, 0x7f]),
+                Transaction::write_read(0x48, vec![0x02], vec![0xf0, 0x7f]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x64]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x64]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x50]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x50]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x4b]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x4b]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x32]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x32]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x19]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x19]),
+                Transaction::write(0x48, vec![0x02, 0x40, 0x00]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x40, 0x00]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0x00]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0x00]),
+                Transaction::write(0x48, vec![0x02, 0xc0, 0xff]),
+                Transaction::write_read(0x48, vec![0x02], vec![0xc0, 0xff]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0xe7]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0xe7]),
+                Transaction::write(0x48, vec![0x02, 0x00, 0xc9]),
+                Transaction::write_read(0x48, vec![0x02], vec![0x00, 0xc9]),
+            ];
+            let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for t in &temps {
+                let result = tmp108.set_low_limit(*t).await;
+                assert!(result.is_ok());
+
+                let result = tmp108.low_limit().await;
+                assert!(result.is_ok());
+
+                let temp = result.unwrap();
+                assert_approx_eq!(temp, *t, 1e-4);
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
         }
 
         #[cfg(feature = "embedded-sensors-hal-async")]
