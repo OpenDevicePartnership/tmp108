@@ -28,7 +28,9 @@ jobs:
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       - name: cargo check
-        run: cargo check -F full --locked
+        run: |
+          cargo update
+          cargo hack --feature-powerset check
 
   msrv:
     runs-on: ubuntu-latest
@@ -62,5 +64,9 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.msrv }}
+      - name: cargo install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
       - name: cargo +${{ matrix.msrv }} check
-        run: cargo check -F full --locked
+        run: |
+          cargo update
+          cargo hack --feature-powerset check
