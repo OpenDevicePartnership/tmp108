@@ -1061,19 +1061,19 @@ mod tests {
                 // Set hysteresis to 0.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x00]),            // configure: write with Hysteresis::_0C (0x0022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x00]), // configure: write with Hysteresis::_0C (0x0022)
                 // Set hysteresis to 1.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),            // configure: write with Hysteresis::_1C (0x1022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]), // configure: write with Hysteresis::_1C (0x1022)
                 // Set hysteresis to 2.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x20]),            // configure: write with Hysteresis::_2C (0x2022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x20]), // configure: write with Hysteresis::_2C (0x2022)
                 // Set hysteresis to 4.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x30]),            // configure: write with Hysteresis::_4C (0x3022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x30]), // configure: write with Hysteresis::_4C (0x3022)
             ];
 
             let mock = Mock::new(&expectations);
@@ -1380,19 +1380,19 @@ mod tests {
                 // Set hysteresis to 0.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x00]),            // configure: write with Hysteresis::_0C (0x0022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x00]), // configure: write with Hysteresis::_0C (0x0022)
                 // Set hysteresis to 1.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),            // configure: write with Hysteresis::_1C (0x1022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]), // configure: write with Hysteresis::_1C (0x1022)
                 // Set hysteresis to 2.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x20]),            // configure: write with Hysteresis::_2C (0x2022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x20]), // configure: write with Hysteresis::_2C (0x2022)
                 // Set hysteresis to 4.0 C
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // read_configuration
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // configure: read
-                Transaction::write(0x48, vec![0x01, 0x22, 0x30]),            // configure: write with Hysteresis::_4C (0x3022)
+                Transaction::write(0x48, vec![0x01, 0x22, 0x30]), // configure: write with Hysteresis::_4C (0x3022)
             ];
 
             let mock = Mock::new(&expectations);
