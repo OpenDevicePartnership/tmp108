@@ -518,6 +518,51 @@ impl<I2C: embedded_hal::i2c::I2c> embedded_sensors_hal::temperature::Temperature
     }
 }
 
+#[cfg(all(feature = "embedded-sensors-hal", not(feature = "async")))]
+impl<I2C: embedded_hal::i2c::I2c> embedded_sensors_hal::temperature::TemperatureThresholdSet for Tmp108<I2C> {
+    fn set_temperature_threshold_low(
+        &mut self,
+        threshold: embedded_sensors_hal::temperature::DegreesCelsius,
+    ) -> Result<(), Self::Error> {
+        self.set_low_limit(threshold).map_err(Error::Bus)
+    }
+
+    fn set_temperature_threshold_high(
+        &mut self,
+        threshold: embedded_sensors_hal::temperature::DegreesCelsius,
+    ) -> Result<(), Self::Error> {
+        self.set_high_limit(threshold).map_err(Error::Bus)
+    }
+}
+
+#[cfg(all(feature = "embedded-sensors-hal", not(feature = "async")))]
+impl<I2C: embedded_hal::i2c::I2c> embedded_sensors_hal::temperature::TemperatureHysteresis for Tmp108<I2C> {
+    fn set_temperature_threshold_hysteresis(
+        &mut self,
+        hysteresis: embedded_sensors_hal::temperature::DegreesCelsius,
+    ) -> Result<(), Self::Error> {
+        // Trait method takes a continuous range of f32 values as argument, but internally driver
+        // only accepts 4 discrete values for hysteresis.
+        //
+        // We ensure only a correct value for hysteresis is passed in, and return error otherwise.
+        let hysteresis = if (hysteresis - 0.0).abs() < f32::EPSILON {
+            Hysteresis::_0C
+        } else if (hysteresis - 1.0).abs() < f32::EPSILON {
+            Hysteresis::_1C
+        } else if (hysteresis - 2.0).abs() < f32::EPSILON {
+            Hysteresis::_2C
+        } else if (hysteresis - 4.0).abs() < f32::EPSILON {
+            Hysteresis::_4C
+        } else {
+            return Err(Error::InvalidInput);
+        };
+
+        let mut config = self.read_configuration().map_err(|_| Error::Other)?;
+        config.hysteresis = hysteresis;
+        self.configure(config).map_err(Error::Bus)
+    }
+}
+
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
 impl<E: embedded_hal_async::i2c::Error> embedded_sensors_hal_async::sensor::Error for Error<E> {
     fn kind(&self) -> embedded_sensors_hal_async::sensor::ErrorKind {
@@ -951,6 +996,128 @@ mod tests {
             let mut mock = tmp108.destroy();
             mock.done();
         }
+
+        #[cfg(feature = "embedded-sensors-hal")]
+        #[test]
+        fn handle_threshold_settings() {
+            use embedded_sensors_hal::temperature::TemperatureThresholdSet;
+
+            // I2C transaction expectations
+            // Temperature Register = 0x00
+            // Configuration Register = 0x01
+            // Low Limit Register = 0x02
+            // High Limit Register = 0x03
+            let expectations = vec![
+                // Configure: Read current config
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                // Configure: Write new config (Interrupt mode, Active Low)
+                Transaction::write(0x48, vec![0x01, 0x26, 0x10]),
+                // Set low threshold to 25.0 C
+                Transaction::write(0x48, vec![0x02, 0x19, 0x00]),
+                // Set high threshold to 80.0 C
+                Transaction::write(0x48, vec![0x03, 0x50, 0x00]),
+                // Set low threshold to 20.0 C (0x1400)
+                Transaction::write(0x48, vec![0x02, 0x14, 0x00]),
+                // Set high threshold to 85.0 C (0x5500)
+                Transaction::write(0x48, vec![0x03, 0x55, 0x00]),
+            ];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Configure as active-low interrupt mode
+            let cfg = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveLow,
+                ..Default::default()
+            };
+
+            let result = tmp108.configure(cfg);
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_low(25.0);
+            assert!(result.is_ok());
+            let result = tmp108.set_temperature_threshold_high(80.0);
+            assert!(result.is_ok());
+
+            // Set thresholds again with different values
+            let result = tmp108.set_temperature_threshold_low(20.0);
+            assert!(result.is_ok());
+            let result = tmp108.set_temperature_threshold_high(85.0);
+            assert!(result.is_ok());
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[cfg(feature = "embedded-sensors-hal")]
+        #[test]
+        fn handle_hysteresis_settings() {
+            use embedded_sensors_hal::temperature::TemperatureHysteresis;
+
+            // Test all valid hysteresis values: 0.0, 1.0, 2.0, 4.0
+            // Setting hysteresis involves reading current config, modifying HYS bits (Byte 2 : Bit 4 and 5), writing back.
+            let expectations = vec![
+                // Set hysteresis to 0.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x00]),            // configure: write with Hysteresis::_0C (0x0022)
+                // Set hysteresis to 1.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),            // configure: write with Hysteresis::_1C (0x1022)
+                // Set hysteresis to 2.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x20]),            // configure: write with Hysteresis::_2C (0x2022)
+                // Set hysteresis to 4.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x30]),            // configure: write with Hysteresis::_4C (0x3022)
+            ];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Test valid hysteresis values, sensor only supports 0.0, 1.0, 2.0, 4.0 Celsius.
+            let result = tmp108.set_temperature_threshold_hysteresis(0.0);
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(1.0);
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(2.0);
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(4.0);
+            assert!(result.is_ok());
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+
+            // Test invalid hysteresis values (should return error)
+            let mock = Mock::new(&vec![]);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Test positive invalid value
+            let result = tmp108.set_temperature_threshold_hysteresis(3.0);
+            assert!(result.is_err());
+            match result {
+                Err(Error::InvalidInput) => {} // Expected error
+                _ => panic!("Expected InvalidInput error for invalid hysteresis value"),
+            }
+
+            // Test negative invalid value
+            let result = tmp108.set_temperature_threshold_hysteresis(-1.0);
+            assert!(result.is_err());
+            match result {
+                Err(Error::InvalidInput) => {} // Expected error
+                _ => panic!("Expected InvalidInput error for negative hysteresis value"),
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
     }
 
     #[cfg(feature = "async")]
@@ -1200,6 +1367,75 @@ mod tests {
             let (mut i2c_mock, mut pin_mock) = tmp108.destroy();
             i2c_mock.done();
             pin_mock.done();
+        }
+
+        #[cfg(feature = "embedded-sensors-hal-async")]
+        #[tokio::test]
+        async fn handle_hysteresis_settings() {
+            use embedded_sensors_hal_async::temperature::TemperatureHysteresis;
+
+            // Test all valid hysteresis values: 0.0, 1.0, 2.0, 4.0
+            // Setting hysteresis involves reading current config, modifying HYS bits, writing back.
+            let expectations = vec![
+                // Set hysteresis to 0.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x00]),            // configure: write with Hysteresis::_0C (0x0022)
+                // Set hysteresis to 1.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x00]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),            // configure: write with Hysteresis::_1C (0x1022)
+                // Set hysteresis to 2.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x20]),            // configure: write with Hysteresis::_2C (0x2022)
+                // Set hysteresis to 4.0 C
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // read_configuration
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x20]), // configure: read
+                Transaction::write(0x48, vec![0x01, 0x22, 0x30]),            // configure: write with Hysteresis::_4C (0x3022)
+            ];
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Test valid hysteresis values, sensor only supports 0.0, 1.0, 2.0, 4.0 Celsius.
+            let result = tmp108.set_temperature_threshold_hysteresis(0.0).await;
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(1.0).await;
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(2.0).await;
+            assert!(result.is_ok());
+
+            let result = tmp108.set_temperature_threshold_hysteresis(4.0).await;
+            assert!(result.is_ok());
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+
+            // Test invalid hysteresis values (should return error)
+            let mock = Mock::new(&vec![]);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Test positive invalid value
+            let result = tmp108.set_temperature_threshold_hysteresis(3.0).await;
+            assert!(result.is_err());
+            match result {
+                Err(Error::InvalidInput) => {} // Expected error
+                _ => panic!("Expected InvalidInput error for invalid hysteresis value"),
+            }
+
+            // Test negative invalid value
+            let result = tmp108.set_temperature_threshold_hysteresis(-1.0).await;
+            assert!(result.is_err());
+            match result {
+                Err(Error::InvalidInput) => {} // Expected error
+                _ => panic!("Expected InvalidInput error for negative hysteresis value"),
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
         }
     }
 }
