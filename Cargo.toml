@@ -17,10 +17,10 @@ include = [
 	"/LICENSE",
 ]
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.90.0"
 
 [dependencies]
-device-driver = { version = "1.0.7", default-features = false, features = ["toml"] }
+device-driver = { version = "1.0.9", default-features = false, features = ["toml"] }
 embedded-hal = "1.0.0"
 embedded-hal-async = { version = "1.0.0", optional = true }
 embedded-sensors-hal = { version = "0.1.0", optional = true }

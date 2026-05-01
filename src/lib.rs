@@ -24,7 +24,11 @@ use embedded_hal::{delay::DelayNs, i2c::I2c};
 #[cfg(feature = "async")]
 use embedded_hal_async::{delay::DelayNs as AsyncDelayNs, i2c::I2c as AsyncI2c};
 
-#[allow(unused, unsafe_code)]
+#[allow(clippy::all)]
+#[allow(clippy::pedantic)]
+#[allow(missing_docs)]
+#[allow(unsafe_code)]
+#[allow(unused)]
 mod inner;
 
 use crate::inner::field_sets::{THigh, TLow};

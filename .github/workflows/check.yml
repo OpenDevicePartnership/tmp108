@@ -158,23 +158,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        msrv: ["1.85"] # We're relying on namespaced-features, which
-                       # was released in 1.60
-                       #
-                       # We also depend on `fixed' which requires rust
-                       # 1.71
-                       #
-                       # Additionally, we depend on embedded-hal-async
-                       # which requires 1.75
-                       #
-                       # embassy-time requires 1.79 due to
-                       # collapse_debuginfo
-                       #
-                       # embassy upstream switched to rust 1.83
-                       #
-                       # f32::abs moved to core from std
-                       #
-                       # need edition 2024
+        msrv: ["1.90"]
 
     name: ubuntu / ${{ matrix.msrv }}
     steps:
