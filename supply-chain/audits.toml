@@ -1,3 +1,434 @@
+
 # cargo-vet audits file
 
-[audits]
+[[audits.device-driver-generation]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.7 -> 1.0.9"
+notes = "Replaced runtime rustfmt subprocess with prettyplease::unparse(), removed 566-line kdl_transform.rs, off-by-one fix. Net removal of powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.device-driver-macros]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.7 -> 1.0.9"
+notes = "Version bump only, updates pinned device-driver-generation dep. No code changes. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.embedded-hal-mock]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+delta = "0.8.0 -> 0.11.1"
+notes = "Test mock library for embedded-hal, no unsafe, no build script, restructured for eh0/eh1. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.embedded-time]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.12.1"
+notes = "no_std time abstractions, #![deny(unsafe_code)], no build script, pure math. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.encode_unicode]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.3.6"
+notes = "UTF-8/16 encoding library, unsafe for transmute/unchecked conversions (standard for encoding), no build script, no_std. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.generator]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.8.7"
+notes = "Stackful coroutine library, extensive unsafe for stack mgmt/context switching (inherent), benign build.rs using cc for asm. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.hash32]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+delta = "0.3.1 -> 0.2.1"
+notes = "32-bit hashing library, unsafe for perf (transmute, unchecked indexing), sound. Uses deprecated mem::uninitialized for [u8;4] buffer. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.io-kit-sys]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.4.1"
+notes = "Apple IOKit FFI bindings, unsafe is all extern C decls (expected), trivial build.rs for linker flag only. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.maitake-sync]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+delta = "0.2.2 -> 0.1.2"
+notes = "Async sync primitives, unsafe for low-level concurrency (expected), no build script, no powerful imports in production code. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.manyhow]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "0.11.4"
+notes = "Proc macro error handling library, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.manyhow-macros]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "0.11.4"
+notes = "Proc macro for proc-macro boilerplate, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.maybe-async-cfg]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "0.2.5"
+notes = "Proc macro for async/sync code generation, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.nusb]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.1.14"
+notes = "Pure Rust USB library, unsafe for FFI/transfer buffers (expected), no build script, std::fs only for sysfs reads. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.pico-de-gallo-hal]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.1.0"
+notes = "USB HAL library, no unsafe, no build script. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.pico-de-gallo-internal]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.1.0"
+notes = "Pure data definition crate, no unsafe, no build script, no I/O, no_std. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.pico-de-gallo-lib]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.1.0"
+notes = "Async USB device library, no unsafe, no build script. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.postcard-derive]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.2.2"
+notes = "Derive macros for MaxSize and Schema, no unsafe, no build script. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.postcard-rpc]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.11.15"
+notes = "Embedded RPC framework, minimal unsafe (Key::from_bytes, test stubs, 1 ptr::copy), no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.postcard-schema]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.2.5"
+notes = "Schema reflection for postcard types, 3 sound unsafe blocks in feature-gated code, no build script, no_std. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.proc-macro-utils]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+version = "0.10.0"
+notes = "Proc macro utility library, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.pulldown-cmark]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-deploy"
+delta = "0.9.3 -> 0.11.3"
+notes = "Markdown parser evolution, unsafe reduced (SIMD escape.rs removed), build.rs is test codegen only (feature-gated). Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.ssmarshal]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "1.0.0"
+notes = "Binary serde marshaling, 13 unsafe blocks all bounds-checked before unchecked access. UNKNOWN publisher but attributable to Robigalia Project. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.stable_deref_trait]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+delta = "1.2.0 -> 1.2.1"
+notes = "Adds sound unsafe StableDeref impls for Cow variants, atomic portability fix. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.trait-variant]]
+who = "Jerry Xie <jerryxie@microsoft.com>"
+criteria = "safe-to-run"
+version = "0.1.2"
+notes = "Proc macro for trait variants, no unsafe, no build script, pure token manipulation. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[trusted.aho-corasick]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-28"
+end = "2027-05-16"
+
+[[trusted.anyhow]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-05"
+end = "2027-05-16"
+
+[[trusted.bytes]]
+criteria = "safe-to-run"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-01-11"
+end = "2027-05-16"
+
+[[trusted.cc]]
+criteria = "safe-to-run"
+user-id = 55123
+start = "2022-10-29"
+end = "2027-05-16"
+
+[[trusted.cc]]
+criteria = "safe-to-run"
+trusted-publisher = "github:rust-lang/cc-rs"
+start = "2025-09-01"
+end = "2027-05-16"
+
+[[trusted.find-msvc-tools]]
+criteria = "safe-to-run"
+user-id = 539 # Josh Stone (cuviper)
+start = "2025-08-29"
+end = "2027-05-16"
+
+[[trusted.indexmap]]
+criteria = "safe-to-deploy"
+user-id = 539 # Josh Stone (cuviper)
+start = "2020-01-15"
+end = "2027-05-16"
+
+[[trusted.linux-raw-sys]]
+criteria = "safe-to-run"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-06-12"
+end = "2027-05-16"
+
+[[trusted.lock_api]]
+criteria = "safe-to-run"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2019-05-04"
+end = "2027-05-16"
+
+[[trusted.loom]]
+criteria = "safe-to-run"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-04-12"
+end = "2027-05-16"
+
+[[trusted.mach2]]
+criteria = "safe-to-run"
+user-id = 51017 # Yuki Okushi (JohnTitor)
+start = "2021-11-15"
+end = "2027-05-16"
+
+[[trusted.memchr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2027-05-16"
+
+[[trusted.num]]
+criteria = "safe-to-deploy"
+user-id = 539 # Josh Stone (cuviper)
+start = "2020-01-10"
+end = "2027-05-16"
+
+[[trusted.num-complex]]
+criteria = "safe-to-deploy"
+user-id = 539 # Josh Stone (cuviper)
+start = "2019-06-10"
+end = "2027-05-16"
+
+[[trusted.num-rational]]
+criteria = "safe-to-deploy"
+user-id = 539 # Josh Stone (cuviper)
+start = "2019-06-11"
+end = "2027-05-16"
+
+[[trusted.paste]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-19"
+end = "2027-05-16"
+
+[[trusted.prettyplease]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2022-01-04"
+end = "2027-05-16"
+
+[[trusted.proc-macro2]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-04-23"
+end = "2027-05-16"
+
+[[trusted.quote]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-04-09"
+end = "2027-05-16"
+
+[[trusted.regex-automata]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-25"
+end = "2027-05-16"
+
+[[trusted.rustix]]
+criteria = "safe-to-run"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-10-29"
+end = "2027-05-16"
+
+[[trusted.ryu]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-05-02"
+end = "2027-05-16"
+
+[[trusted.scopeguard]]
+criteria = "safe-to-run"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2020-02-16"
+end = "2027-05-16"
+
+[[trusted.serde_json]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-02-28"
+end = "2027-05-16"
+
+[[trusted.syn]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-05-16"
+
+[[trusted.tokio]]
+criteria = "safe-to-run"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2020-12-25"
+end = "2027-05-16"
+
+[[trusted.toml_write]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-04-25"
+end = "2027-05-16"
+
+[[trusted.unicode-ident]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2021-10-02"
+end = "2027-05-16"
+
+[[trusted.windows]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-01-15"
+end = "2027-05-16"
+
+[[trusted.windows-collections]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-02-06"
+end = "2027-05-16"
+
+[[trusted.windows-core]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-15"
+end = "2027-05-16"
+
+[[trusted.windows-future]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-02-10"
+end = "2027-05-16"
+
+[[trusted.windows-implement]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-01-27"
+end = "2027-05-16"
+
+[[trusted.windows-interface]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-02-18"
+end = "2027-05-16"
+
+[[trusted.windows-link]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-07-17"
+end = "2027-05-16"
+
+[[trusted.windows-numerics]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2023-05-15"
+end = "2027-05-16"
+
+[[trusted.windows-result]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-02"
+end = "2027-05-16"
+
+[[trusted.windows-strings]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-02"
+end = "2027-05-16"
+
+[[trusted.windows-sys]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-15"
+end = "2027-05-16"
+
+[[trusted.windows-targets]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-09"
+end = "2027-05-16"
+
+[[trusted.windows-threading]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-04-29"
+end = "2027-05-16"
+
+[[trusted.windows_aarch64_gnullvm]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-01"
+end = "2027-05-16"
+
+[[trusted.windows_aarch64_msvc]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-05"
+end = "2027-05-16"
+
+[[trusted.windows_i686_gnu]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-28"
+end = "2027-05-16"
+
+[[trusted.windows_i686_msvc]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-27"
+end = "2027-05-16"
+
+[[trusted.windows_x86_64_gnu]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-28"
+end = "2027-05-16"
+
+[[trusted.windows_x86_64_gnullvm]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-01"
+end = "2027-05-16"
+
+[[trusted.windows_x86_64_msvc]]
+criteria = "safe-to-run"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-27"
+end = "2027-05-16"
