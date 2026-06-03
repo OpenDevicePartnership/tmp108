@@ -43,6 +43,12 @@ criteria = "safe-to-run"
 delta = "0.3.1 -> 0.2.1"
 notes = "32-bit hashing library, unsafe for perf (transmute, unchecked indexing), sound. Uses deprecated mem::uninitialized for [u8;4] buffer. Assisted-by: copilot-cli:claude-opus-4.6"
 
+[[audits.heapless]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+version = "0.9.3"
+notes = "no_std static-friendly collections (Vec, String, Deque, etc.), pulled in transitively by postcard-rpc 0.12. Extensive unsafe for in-place buffer management and atomic operations (inherent to a no-alloc collections crate); no network/fs/process access. build.rs only emits `cargo::rustc-cfg=arm_llsc`/`has_atomic_load_store` based on target triple, no codegen or external commands. Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
 [[audits.io-kit-sys]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
@@ -73,6 +79,12 @@ criteria = "safe-to-deploy"
 version = "0.2.5"
 notes = "Proc macro for async/sync code generation, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
 
+[[audits.mutex-traits]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+version = "1.0.1"
+notes = "Trait abstractions over Mutex implementations, pulled in transitively by heapless. Tiny crate: 5 unsafe lines (5 lock-API wrapper blocks marked `unsafe impl ConstThisStaysAcquired`/`Send`/`Sync`, all sound by construction since they wrap pre-locked APIs). #![deny(missing_docs)], no build script, no I/O. Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
 [[audits.nusb]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
@@ -85,17 +97,35 @@ criteria = "safe-to-run"
 version = "0.1.0"
 notes = "USB HAL library, no unsafe, no build script. Assisted-by: copilot-cli:claude-opus-4.6"
 
+[[audits.pico-de-gallo-hal]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+delta = "0.1.0 -> 0.5.0"
+notes = "Adds OneWire, UART, ADC, PWM, GpioStatefulOutputPin, set_config methods. Still no unsafe, no build script. Adds tokio block_in_place + nested-runtime detection (sync APIs callable from inside an async context). USB I/O via the existing PicoDeGallo client; no direct net/fs/process. Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
 [[audits.pico-de-gallo-internal]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
 version = "0.1.0"
 notes = "Pure data definition crate, no unsafe, no build script, no I/O, no_std. Assisted-by: copilot-cli:claude-opus-4.6"
 
+[[audits.pico-de-gallo-internal]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+delta = "0.1.0 -> 0.5.0"
+notes = "Expands wire protocol with OneWire/UART/ADC/PWM endpoints and new GpioDirection/GpioPull enums. Still no unsafe in src/. Adds a build.rs that writes a generated version-bytes file to OUT_DIR (no commands, no network/fs outside OUT_DIR, no codegen of arbitrary code). Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
 [[audits.pico-de-gallo-lib]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
 version = "0.1.0"
 notes = "Async USB device library, no unsafe, no build script. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.pico-de-gallo-lib]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+delta = "0.1.0 -> 0.5.0"
+notes = "Async client wrapping postcard-rpc + nusb for the Pico de Gallo USB bridge. Adds OneWire/UART/ADC/PWM/PWM-channel/SPI-device APIs matching pico-de-gallo-internal. Still no unsafe in src/, no build script. USB transport only; no direct net/fs/process. Assisted-by: opencode:claude-opus-4.7-1m-internal"
 
 [[audits.postcard-derive]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
@@ -108,6 +138,12 @@ who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
 version = "0.11.15"
 notes = "Embedded RPC framework, minimal unsafe (Key::from_bytes, test stubs, 1 ptr::copy), no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.postcard-rpc]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+delta = "0.11.15 -> 0.12.1"
+notes = "Continued evolution of the postcard RPC framework. Unsafe count remains low (Key::from_bytes, test stubs, a small number of ptr::copy for buffer marshaling). No build script. Optional tokio/tokio-serial transports are feature-gated and not enabled by default in this dependency graph (pico-de-gallo-lib uses the nusb transport). Assisted-by: opencode:claude-opus-4.7-1m-internal"
 
 [[audits.postcard-schema]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
@@ -138,6 +174,18 @@ who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
 delta = "1.2.0 -> 1.2.1"
 notes = "Adds sound unsafe StableDeref impls for Cow variants, atomic portability fix. Assisted-by: copilot-cli:claude-opus-4.6"
+
+[[audits.tokio]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+version = "1.52.3"
+notes = "Async runtime. The existing [[trusted.tokio]] entry covers releases published by user 6741 (Alice Ryhl); this specific 1.52.3 release isn't covered by that trust window so add an explicit audit. tokio's capability surface is broad (process spawn, fs, signal, net) but only what's enabled by features matters: tmp108's dev-dep enables `rt`, `macros`, `rt-multi-thread`, `time` only - no `fs`, `net`, `process`, `signal`. unsafe usage is extensive but expected for an async runtime (intrusive lists, atomics, thread-local state); no build script. Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
+[[audits.tokio-macros]]
+who = "Felipe Balbi <felipe@balbi.sh>"
+criteria = "safe-to-run"
+version = "2.7.0"
+notes = "Proc-macro crate providing #[tokio::main] / #[tokio::test] - the only entry points the dev-deps use. Zero unsafe, no build script, no I/O - pure token manipulation. Assisted-by: opencode:claude-opus-4.7-1m-internal"
 
 [[audits.trait-variant]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
