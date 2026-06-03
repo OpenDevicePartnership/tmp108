@@ -24,11 +24,27 @@ owning an Embassy/RTIC project.
 - No Embassy, RTIC, or MCU-specific HAL integration. The abstraction is
   `embedded-hal` (blocking) and `embedded-hal-async`, with `pico-de-gallo-hal`
   as the concrete implementation used to run examples.
-- No new public API on `Tmp108` or `AlertTmp108`. Pure docs + examples + CI.
+- No new public methods on `Tmp108` or `AlertTmp108`. Pure docs + examples + CI
+  + one minimal re-export change (see §3.0).
 - No `AGENTS.md` in this round. Worth a follow-on; out of scope here.
 - No reorganization of the existing test module.
 
 ## 3. Deliverables
+
+### 3.0 Re-export `Config` field types (prerequisite)
+
+`Config`'s fields are public, but the types they hold (`Mode`, `Thermostat`,
+`ConversionRate`, `Hysteresis`, `Polarity`) are imported into `src/lib.rs` with
+`use` rather than `pub use` (`src/lib.rs:35`). Result: downstream consumers can
+read `Config` but cannot construct one with non-default values. Verified by
+attempting to build `Config { thermostat_mode: tmp108::Thermostat::Interrupt,
+.. }` from an out-of-crate test, which fails with `E0603: enum 'Thermostat' is
+private`.
+
+**Change:** add `pub use crate::inner::{ConversionRate, Hysteresis, Mode,
+Polarity, Thermostat};` to the crate root. One line. Semver-additive (no
+existing item is removed or renamed). Unblocks every Config-using example and
+doctest in §3.2 and §3.3.
 
 ### 3.1 README rewrite
 
@@ -107,7 +123,7 @@ and which TMP108 register interactions occur.
 | File | Variants | What it shows |
 |------|----------|---------------|
 | `oneshot.rs` | blocking + async (exists) | Single conversion (light touch; bring docstring into the new style) |
-| `continuous.rs` | blocking + async | Continuous-mode workflow. **Async variant** uses `Tmp108::continuous` closure with `wait_for_temperature` and `Delay`. **Blocking variant** orchestrates manually: `configure(Mode::Continuous)`, loop `wait_for_temperature(&mut delay)`, then `shutdown()` — because `continuous` itself is async-only (`src/lib.rs:317`). Both loop N times and print temperatures. |
+| `continuous.rs` | **async only** | `Tmp108::continuous` closure with `wait_for_temperature(&mut delay)`, loops N times, prints temperatures. Async-only because `Tmp108::continuous` itself is async-only (`src/lib.rs:317`); the `//!` block documents this and points the reader at a blocking-mode pattern using `configure(...)` + `wait_for_temperature` + `shutdown()`. |
 | `alert_interrupt.rs` | **async only** | `AlertTmp108` in interrupt mode: set low/high thresholds, await alert via GPIO0 falling edge, print the temperature returned by `wait_for_temperature_threshold`. |
 | `alert_comparator.rs` | **async only** | `AlertTmp108` in comparator mode: same wiring, but show the latched-pin behavior — a second call to `wait_for_temperature_threshold` returns immediately while still over-threshold; loop demonstrates the hysteresis-driven release. |
 | `sensor_trait.rs` | blocking + async | A generic function over `embedded_sensors_hal::TemperatureSensor` / `embedded_sensors_hal_async::temperature::TemperatureSensor` is called with a `Tmp108`. Demonstrates the integration pattern for larger firmware that wants to abstract over multiple sensors. |
@@ -115,6 +131,8 @@ and which TMP108 register interactions occur.
 **Async-only justification:** `AlertTmp108` is gated on `feature =
 "embedded-sensors-hal-async"` + `feature = "async"`
 (`src/lib.rs:143-201`). There is no blocking equivalent in the driver.
+`continuous.rs` is async-only because `Tmp108::continuous` itself is gated on
+`feature = "async"` (`src/lib.rs:317`).
 
 The blocking/async variants are produced via the `#[cfg(not(feature =
 "async"))]` / `#[cfg(feature = "async")]` split already used in
@@ -209,28 +227,32 @@ The `cargo hack --feature-powerset` job already covers feature unification; we a
 
 A reviewer can verify each of these mechanically.
 
-1. `cargo test --doc` passes with no features, with `--features async`, and with
+1. The crate re-exports `ConversionRate`, `Hysteresis`, `Mode`, `Polarity`, and
+   `Thermostat` at the crate root; an out-of-crate consumer can construct
+   `Config { thermostat_mode: tmp108::Thermostat::Interrupt, ..Default::default()
+   }` without errors.
+2. `cargo test --doc` passes with no features, with `--features async`, and with
    `--features "async embedded-sensors-hal-async"`.
-2. `cargo build --examples` passes for each feature combination listed in §3.5.
-3. Every public method on `Tmp108` and `AlertTmp108` (per the list in §3.2) has
+3. `cargo build --examples` passes for each feature combination listed in §3.5.
+4. Every public method on `Tmp108` and `AlertTmp108` (per the list in §3.2) has
    a `# Examples` block visible in `cargo doc --no-deps --all-features --open`.
-4. Running `cargo run --example oneshot`, `cargo run --example continuous
+5. Running `cargo run --example oneshot`, `cargo run --example continuous
    --features async`, `cargo run --example alert_interrupt --features "async
    embedded-sensors-hal-async"`, `cargo run --example alert_comparator
    --features "async embedded-sensors-hal-async"`, and `cargo run --example
    sensor_trait --features embedded-sensors-hal` (and the async variant) all
    execute end-to-end against the attached Pico de Gallo and print sensible
    output.
-5. The README's three usage snippets match the marker regions in their source
+6. The README's three usage snippets match the marker regions in their source
    example files byte-for-byte; the snippet-check script returns 0.
-6. **Hardware verification of the alert state machine:** `alert_interrupt`
+7. **Hardware verification of the alert state machine:** `alert_interrupt`
    triggers on a finger-warming stimulus and reports a temperature above its
    configured high limit; `alert_comparator` demonstrates the latched-pin
    behavior (a second `wait_for_temperature_threshold` call returns immediately
    while still over-threshold) and the release after the temperature drops below
    `T_high − HYS`. Observed behavior matches the comments at
    `src/lib.rs:602-640`.
-7. `cargo fmt --check`, `cargo clippy --all-features --all-targets`, and `cargo
+8. `cargo fmt --check`, `cargo clippy --all-features --all-targets`, and `cargo
    doc --no-deps --all-features` all pass.
 
 ## 7. Out of scope (future work)
