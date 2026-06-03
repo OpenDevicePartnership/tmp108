@@ -639,6 +639,28 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # Errors
     ///
     /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// (Doctest runs against the blocking API; the async variant has the same
+    /// shape with `.await` after the call.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// # #[cfg(feature = "async")] fn main() {}
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x02], vec![0x19, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.low_limit().unwrap();
+    /// assert!((limit - 25.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub async fn low_limit(&mut self) -> Result<f32, I2C::Error> {
         #[cfg(feature = "async")]
         let raw = self.inner.t_low().read_async().await?;
@@ -653,6 +675,27 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # Errors
     ///
     /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// (Doctest runs against the blocking API; the async variant has the same
+    /// shape with `.await` after the call.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// # #[cfg(feature = "async")] fn main() {}
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write(0x48, vec![0x02, 0x19, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_low_limit(25.0).unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub async fn set_low_limit(&mut self, limit: f32) -> Result<(), I2C::Error> {
         let raw = Self::to_raw(limit).to_be_bytes();
 
@@ -670,6 +713,28 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # Errors
     ///
     /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// (Doctest runs against the blocking API; the async variant has the same
+    /// shape with `.await` after the call.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// # #[cfg(feature = "async")] fn main() {}
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x03], vec![0x50, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.high_limit().unwrap();
+    /// assert!((limit - 80.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub async fn high_limit(&mut self) -> Result<f32, I2C::Error> {
         #[cfg(feature = "async")]
         let raw = self.inner.t_high().read_async().await?;
@@ -684,6 +749,27 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # Errors
     ///
     /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// (Doctest runs against the blocking API; the async variant has the same
+    /// shape with `.await` after the call.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// # #[cfg(feature = "async")] fn main() {}
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write(0x48, vec![0x03, 0x50, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_high_limit(80.0).unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub async fn set_high_limit(&mut self, limit: f32) -> Result<(), I2C::Error> {
         let raw = Self::to_raw(limit).to_be_bytes();
 
