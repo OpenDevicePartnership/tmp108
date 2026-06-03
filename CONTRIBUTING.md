@@ -33,3 +33,41 @@ We disabled squashing of commit and would like to maintain a clean commit histor
 ## Regressions
 
 When reporting a regression, please ensure that you use `git bisect` to find the first offending commit, as that will help us finding the culprit a lot faster.
+
+## README snippet markers
+
+The "Usage" section of `README.md` contains snippets lifted verbatim from
+runnable example programs in `examples/`. To enforce that the README cannot
+drift from the API:
+
+1. In an example file, wrap the snippet body in markers:
+
+   ```rust
+   // README-SNIPPET-START: <name>
+   <code>
+   // README-SNIPPET-END: <name>
+   ```
+
+   The code between the markers is stripped of four spaces of indentation
+   when compared (so it can live inside an `async fn main`).
+
+2. In `README.md`, present the same code as an HTML comment followed by an
+   `ignore`d Rust fence:
+
+   ````markdown
+   <!-- snippet: <name> -->
+   ```rust,ignore
+   <code>
+   ```
+   ````
+
+   The `,ignore` keeps rustdoc from trying to compile the snippet (it lacks
+   imports and is for display only); the `<!-- snippet: ... -->` HTML
+   comment is the marker the checker matches.
+
+3. Register the `<name> -> file.rs` mapping in `scripts/check-readme-snippets.sh`'s
+   `SNIPPETS` map.
+
+CI runs `scripts/check-readme-snippets.sh`. If a snippet drifts, fix the
+README to match the example (the example is the source of truth — it
+compiles, runs, and is exercised on real hardware).
