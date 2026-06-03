@@ -100,6 +100,20 @@ pub struct Tmp108<I2C: AsyncI2c> {
 )]
 impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// Create a new TMP108 instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::{A0, Tmp108};
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new(i2c, A0::Sda);
+    /// assert_eq!(tmp.addr(), 0x4a);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn new(i2c: I2C, a0: A0) -> Self {
         let interface = Interface::new(i2c, a0);
         let inner = Inner::new(interface);
@@ -109,39 +123,139 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
 
     /// Create a new TMP108 instance with A0 tied to GND, resulting in
     /// an instance responding to address `0x48`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// assert_eq!(tmp.addr(), 0x48);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn new_with_a0_gnd(i2c: I2C) -> Self {
         Self::new(i2c, A0::Gnd)
     }
 
     /// Create a new TMP108 instance with A0 tied to V+, resulting in
     /// an instance responding to address `0x49`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_vplus(i2c);
+    /// assert_eq!(tmp.addr(), 0x49);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn new_with_a0_vplus(i2c: I2C) -> Self {
         Self::new(i2c, A0::Vplus)
     }
 
     /// Create a new TMP108 instance with A0 tied to SDA, resulting in
     /// an instance responding to address `0x4a`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_sda(i2c);
+    /// assert_eq!(tmp.addr(), 0x4a);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn new_with_a0_sda(i2c: I2C) -> Self {
         Self::new(i2c, A0::Sda)
     }
 
     /// Create a new TMP108 instance with A0 tied to SCL, resulting in
     /// an instance responding to address `0x4b`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_scl(i2c);
+    /// assert_eq!(tmp.addr(), 0x4b);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn new_with_a0_scl(i2c: I2C) -> Self {
         Self::new(i2c, A0::Scl)
     }
 
     /// Get the current I2C address
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// assert_eq!(tmp.addr(), 0x48);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
     pub fn addr(&self) -> u8 {
         self.inner.interface.addr
     }
 
     /// Destroy the driver instance, return the I2C bus instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let mut i2c = tmp.destroy();
+    /// i2c.done();
+    /// # }
+    /// ```
     pub fn destroy(self) -> I2C {
         self.inner.interface.i2c
     }
 
     /// Create a new `AlertTmp108` instance by consuming the original Tmp108 instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::digital;
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let alert = digital::Mock::new(&[]);
+    /// let tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let alert_tmp = tmp.into_alert(alert);
+    /// let (mut i2c, mut alert) = alert_tmp.destroy();
+    /// i2c.done();
+    /// alert.done();
+    /// # }
+    /// ```
     #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
     pub fn into_alert<ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin>(
         self,
