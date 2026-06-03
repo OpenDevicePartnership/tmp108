@@ -30,7 +30,6 @@ mod inner;
 
 use crate::inner::Inner;
 use crate::inner::field_sets::{THigh, TLow};
-
 pub use crate::inner::{ConversionRate, Hysteresis, Mode, Polarity, Thermostat};
 
 /// A0 pin logic level representation.
