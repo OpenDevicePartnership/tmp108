@@ -2,7 +2,8 @@
 
 **Date:** 2026-06-03
 **Status:** Approved (design)
-**Audience:** Maintainers, and the implementer (human or agent) who will execute the plan that comes from this spec.
+**Audience:** Maintainers, and the implementer (human or agent) who will execute
+the plan that comes from this spec.
 
 ---
 
@@ -14,11 +15,15 @@ An AI agent reading docs.rs or `examples/` for `tmp108` gets snippets that:
 2. **Cover every workflow the chip supports.** Today, only one is shown.
 3. **Cannot drift again** — CI fails when documentation diverges from the API.
 
-Secondary goal: a human reading the same material gets a usable cookbook for the four operating modes of the part, including the alert state machine, without owning an Embassy/RTIC project.
+Secondary goal: a human reading the same material gets a usable cookbook for the
+four operating modes of the part, including the alert state machine, without
+owning an Embassy/RTIC project.
 
 ## 2. Non-goals
 
-- No Embassy, RTIC, or MCU-specific HAL integration. The abstraction is `embedded-hal` (blocking) and `embedded-hal-async`, with `pico-de-gallo-hal` as the concrete implementation used to run examples.
+- No Embassy, RTIC, or MCU-specific HAL integration. The abstraction is
+  `embedded-hal` (blocking) and `embedded-hal-async`, with `pico-de-gallo-hal`
+  as the concrete implementation used to run examples.
 - No new public API on `Tmp108` or `AlertTmp108`. Pure docs + examples + CI.
 - No `AGENTS.md` in this round. Worth a follow-on; out of scope here.
 - No reorganization of the existing test module.
@@ -27,46 +32,77 @@ Secondary goal: a human reading the same material gets a usable cookbook for the
 
 ### 3.1 README rewrite
 
-Replace the current `## Usage` section in `README.md`. Because `src/lib.rs:12` does `#![doc = include_str!("../README.md")]`, the same content becomes the crate-level rustdoc on docs.rs.
+Replace the current `## Usage` section in `README.md`. Because `src/lib.rs:12`
+does `#![doc = include_str!("../README.md")]`, the same content becomes the
+crate-level rustdoc on docs.rs.
 
 The rewrite contains:
 
-1. **Three real snippets, lifted verbatim from CI-verified sources.** Each snippet is short (≤25 lines) and shows one workflow:
+1. **Three real snippets, lifted verbatim from CI-verified sources.** Each
+   snippet is short (≤25 lines) and shows one workflow:
+
    - blocking one-shot read,
    - async continuous loop with `wait_for_temperature`,
    - `AlertTmp108` interrupt-mode threshold wait.
+
    Snippets are extracted by tooling (see §3.4) so they cannot drift.
-2. **Feature-flag matrix** (table): `async`, `embedded-sensors-hal`, `embedded-sensors-hal-async`, the legal combinations, and what each unlocks. Specifically note that `embedded-sensors-hal-async` requires `async`, and `AlertTmp108` requires both.
+
+2. **Feature-flag matrix** (table): `async`, `embedded-sensors-hal`,
+   `embedded-sensors-hal-async`, the legal combinations, and what each
+   unlocks. Specifically note that `embedded-sensors-hal-async` requires
+   `async`, and `AlertTmp108` requires both.
+
 3. **Gotchas list** (bulleted, concise):
-   - Comparator mode latches the ALERT pin until temperature is back inside `(T_low + HYS, T_high − HYS)`; interrupt mode clears on config-register read.
-   - ALERT polarity is configured on-chip; wire your pull resistor accordingly. The Pico-de-Gallo examples assume active-low + external pull-up.
-   - `Tmp108::new` does **not** take a `DelayNs`. The delay only appears where it is genuinely needed (`wait_for_temperature`).
-   - Raw temperature is a 12-bit signed value in the upper bits of a 16-bit register; the driver converts to `f32` Celsius at 0.0625 °C/LSB.
+
+   - Comparator mode latches the ALERT pin until temperature is back inside
+     `(T_low + HYS, T_high − HYS)`; interrupt mode clears on config-register
+     read.
+   - ALERT polarity is configured on-chip; wire your pull resistor
+     accordingly. The Pico-de-Gallo examples assume active-low + external
+     pull-up.
+   - `Tmp108::new` does **not** take a `DelayNs`. The delay only appears where
+     it is genuinely needed (`wait_for_temperature`).
+   - Raw temperature is a 12-bit signed value in the upper bits of a 16-bit
+     register; the driver converts to `f32` Celsius at 0.0625 °C/LSB.
    - `continuous` puts the chip back into shutdown when its closure returns.
 
 ### 3.2 Per-method `# Examples` doctests in `src/lib.rs`
 
-Every public method on `Tmp108` and `AlertTmp108` gets a `# Examples` block. All doctests use `embedded-hal-mock` (already a dev-dep) so `cargo test --doc` actually executes them.
+Every public method on `Tmp108` and `AlertTmp108` gets a `# Examples` block. All
+doctests use `embedded-hal-mock` (already a dev-dep) so `cargo test --doc`
+actually executes them.
 
 In scope (concrete list):
-- `Tmp108::new`, `new_with_a0_gnd`, `new_with_a0_vplus`, `new_with_a0_sda`, `new_with_a0_scl`, `addr`, `destroy`, `into_alert`
+
+- `Tmp108::new`, `new_with_a0_gnd`, `new_with_a0_vplus`, `new_with_a0_sda`,
+  `new_with_a0_scl`, `addr`, `destroy`, `into_alert`
 - `Tmp108::read_configuration`, `configure`
 - `Tmp108::temperature`
-- `Tmp108::one_shot`, `shutdown`, `continuous` (async only), `wait_for_temperature`
+- `Tmp108::one_shot`, `shutdown`, `continuous` (async only),
+  `wait_for_temperature`
 - `Tmp108::low_limit`, `set_low_limit`, `high_limit`, `set_high_limit`
-- `AlertTmp108::new`, `new_with_a0_gnd`, `new_with_a0_vplus`, `new_with_a0_sda`, `new_with_a0_scl`, `destroy`
+- `AlertTmp108::new`, `new_with_a0_gnd`, `new_with_a0_vplus`, `new_with_a0_sda`,
+  `new_with_a0_scl`, `destroy`
 
-Each doctest is 5–15 lines (excluding mock setup), uses `# fn main()` hiding to keep the visible snippet tight, and asserts at least one expected effect (e.g., final mock transaction count, returned address). Async doctests use the `tokio` test harness already established in the existing test module.
+Each doctest is 5–15 lines (excluding mock setup), uses `# fn main()` hiding to
+keep the visible snippet tight, and asserts at least one expected effect (e.g.,
+final mock transaction count, returned address). Async doctests use the `tokio`
+test harness already established in the existing test module.
 
-`new_with_a0_*` doctests may be omitted on the trivial constructors if a single representative doctest on `new` would clearly suffice — implementer's judgement. Default: include them, agents grep for the exact constructor name.
+`new_with_a0_*` doctests may be omitted on the trivial constructors if a single
+representative doctest on `new` would clearly suffice — implementer's
+judgement. Default: include them, agents grep for the exact constructor name.
 
 ### 3.3 Expanded `examples/` directory
 
 All examples run on Pico de Gallo with a TMP108 wired as:
+
 - I²C on the default bus, A0 → GND → address `0x48`
 - ALERT → GPIO0 on the Pico (external 2 kΩ pull-up to V+)
 
-Every example file begins with a `//!` block declaring: what the program demonstrates, the required hardware wiring, the cargo feature flags it expects, and which TMP108 register interactions occur.
+Every example file begins with a `//!` block declaring: what the program
+demonstrates, the required hardware wiring, the cargo feature flags it expects,
+and which TMP108 register interactions occur.
 
 | File | Variants | What it shows |
 |------|----------|---------------|
@@ -76,11 +112,17 @@ Every example file begins with a `//!` block declaring: what the program demonst
 | `alert_comparator.rs` | **async only** | `AlertTmp108` in comparator mode: same wiring, but show the latched-pin behavior — a second call to `wait_for_temperature_threshold` returns immediately while still over-threshold; loop demonstrates the hysteresis-driven release. |
 | `sensor_trait.rs` | blocking + async | A generic function over `embedded_sensors_hal::TemperatureSensor` / `embedded_sensors_hal_async::temperature::TemperatureSensor` is called with a `Tmp108`. Demonstrates the integration pattern for larger firmware that wants to abstract over multiple sensors. |
 
-**Async-only justification:** `AlertTmp108` is gated on `feature = "embedded-sensors-hal-async"` + `feature = "async"` (`src/lib.rs:143-201`). There is no blocking equivalent in the driver.
+**Async-only justification:** `AlertTmp108` is gated on `feature =
+"embedded-sensors-hal-async"` + `feature = "async"`
+(`src/lib.rs:143-201`). There is no blocking equivalent in the driver.
 
-The blocking/async variants are produced via the `#[cfg(not(feature = "async"))]` / `#[cfg(feature = "async")]` split already used in `examples/oneshot.rs`. One file per example, two `main` functions.
+The blocking/async variants are produced via the `#[cfg(not(feature =
+"async"))]` / `#[cfg(feature = "async")]` split already used in
+`examples/oneshot.rs`. One file per example, two `main` functions.
 
-**Inert-when-features-off invariant:** `cargo build --examples` always builds every file in `examples/`, regardless of features. To prevent compile errors in unsupported feature combinations, every example file uses a top-level cfg guard:
+**Inert-when-features-off invariant:** `cargo build --examples` always builds
+every file in `examples/`, regardless of features. To prevent compile errors in
+unsupported feature combinations, every example file uses a top-level cfg guard:
 
 ```rust
 #![cfg_attr(not(<required features>), allow(unused_imports))]
@@ -88,11 +130,16 @@ The blocking/async variants are produced via the `#[cfg(not(feature = "async"))]
 // (or neither) is compiled in any given feature combination.
 ```
 
-For files that have no valid main at all in some combination (e.g., `alert_interrupt.rs` with `--no-default-features`), the file uses a single `#[cfg_attr(not(all(feature = "async", feature = "embedded-sensors-hal-async")), allow(dead_code))] fn main() {}` stub so `cargo build --examples` always succeeds.
+For files that have no valid main at all in some combination (e.g.,
+`alert_interrupt.rs` with `--no-default-features`), the file uses a single
+`#[cfg_attr(not(all(feature = "async", feature = "embedded-sensors-hal-async")),
+allow(dead_code))] fn main() {}` stub so `cargo build --examples` always
+succeeds.
 
 ### 3.4 README snippet extraction
 
-To enforce "snippets are lifted verbatim from CI-verified sources," each README snippet is bracketed in its source example file with marker comments:
+To enforce "snippets are lifted verbatim from CI-verified sources," each README
+snippet is bracketed in its source example file with marker comments:
 
 ```rust
 // README-SNIPPET-START: oneshot
@@ -100,7 +147,11 @@ To enforce "snippets are lifted verbatim from CI-verified sources," each README 
 // README-SNIPPET-END: oneshot
 ```
 
-A short build script (`xtask` binary or a plain `scripts/check-readme-snippets.sh`) extracts each region and compares it to the matching fenced block in `README.md`. CI runs this check. **Implementer chooses** the simplest mechanism that works; a 30-line shell/`awk` script is acceptable.
+A short build script (`xtask` binary or a plain
+`scripts/check-readme-snippets.sh`) extracts each region and compares it to the
+matching fenced block in `README.md`. CI runs this check. **Implementer
+chooses** the simplest mechanism that works; a 30-line shell/`awk` script is
+acceptable.
 
 ### 3.5 CI changes (`.github/workflows/check.yml`)
 
@@ -133,10 +184,16 @@ The `cargo hack --feature-powerset` job already covers feature unification; we a
 
 ## 4. Constraints
 
-- **MSRV 1.90 and `edition = "2024"`** must continue to pass. Examples and doctests must not use newer features.
-- **`unsafe_code = "deny"`, `missing_docs = "deny"`, `clippy::pedantic = "deny"`** apply across the crate. Examples are part of the crate's target set; pedantic clippy applies.
-- **Pico-de-Gallo hardware required** for `cargo run --example …` to succeed. Confirmed by the user: the board is attached, TMP108 at `0x48`, ALERT on GPIO0 with a 2 kΩ pull-up.
-- **No new runtime dependencies on the library crate.** `pico-de-gallo-hal` and `tokio` are already dev-dependencies.
+- **MSRV 1.90 and `edition = "2024"`** must continue to pass. Examples and
+  doctests must not use newer features.
+- **`unsafe_code = "deny"`, `missing_docs = "deny"`, `clippy::pedantic =
+  "deny"`** apply across the crate. Examples are part of the crate's target set;
+  pedantic clippy applies.
+- **Pico-de-Gallo hardware required** for `cargo run --example …` to
+  succeed. Confirmed by the user: the board is attached, TMP108 at `0x48`, ALERT
+  on GPIO0 with a 2 kΩ pull-up.
+- **No new runtime dependencies on the library crate.** `pico-de-gallo-hal` and
+  `tokio` are already dev-dependencies.
 
 ## 5. Risks and mitigations
 
@@ -152,17 +209,34 @@ The `cargo hack --feature-powerset` job already covers feature unification; we a
 
 A reviewer can verify each of these mechanically.
 
-1. `cargo test --doc` passes with no features, with `--features async`, and with `--features "async embedded-sensors-hal-async"`.
+1. `cargo test --doc` passes with no features, with `--features async`, and with
+   `--features "async embedded-sensors-hal-async"`.
 2. `cargo build --examples` passes for each feature combination listed in §3.5.
-3. Every public method on `Tmp108` and `AlertTmp108` (per the list in §3.2) has a `# Examples` block visible in `cargo doc --no-deps --all-features --open`.
-4. Running `cargo run --example oneshot`, `cargo run --example continuous --features async`, `cargo run --example alert_interrupt --features "async embedded-sensors-hal-async"`, `cargo run --example alert_comparator --features "async embedded-sensors-hal-async"`, and `cargo run --example sensor_trait --features embedded-sensors-hal` (and the async variant) all execute end-to-end against the attached Pico de Gallo and print sensible output.
-5. The README's three usage snippets match the marker regions in their source example files byte-for-byte; the snippet-check script returns 0.
-6. **Hardware verification of the alert state machine:** `alert_interrupt` triggers on a finger-warming stimulus and reports a temperature above its configured high limit; `alert_comparator` demonstrates the latched-pin behavior (a second `wait_for_temperature_threshold` call returns immediately while still over-threshold) and the release after the temperature drops below `T_high − HYS`. Observed behavior matches the comments at `src/lib.rs:602-640`.
-7. `cargo fmt --check`, `cargo clippy --all-features --all-targets`, and `cargo doc --no-deps --all-features` all pass.
+3. Every public method on `Tmp108` and `AlertTmp108` (per the list in §3.2) has
+   a `# Examples` block visible in `cargo doc --no-deps --all-features --open`.
+4. Running `cargo run --example oneshot`, `cargo run --example continuous
+   --features async`, `cargo run --example alert_interrupt --features "async
+   embedded-sensors-hal-async"`, `cargo run --example alert_comparator
+   --features "async embedded-sensors-hal-async"`, and `cargo run --example
+   sensor_trait --features embedded-sensors-hal` (and the async variant) all
+   execute end-to-end against the attached Pico de Gallo and print sensible
+   output.
+5. The README's three usage snippets match the marker regions in their source
+   example files byte-for-byte; the snippet-check script returns 0.
+6. **Hardware verification of the alert state machine:** `alert_interrupt`
+   triggers on a finger-warming stimulus and reports a temperature above its
+   configured high limit; `alert_comparator` demonstrates the latched-pin
+   behavior (a second `wait_for_temperature_threshold` call returns immediately
+   while still over-threshold) and the release after the temperature drops below
+   `T_high − HYS`. Observed behavior matches the comments at
+   `src/lib.rs:602-640`.
+7. `cargo fmt --check`, `cargo clippy --all-features --all-targets`, and `cargo
+   doc --no-deps --all-features` all pass.
 
 ## 7. Out of scope (future work)
 
-- `AGENTS.md` with a register-level state machine table and a "common mistakes" knowledge base.
+- `AGENTS.md` with a register-level state machine table and a "common mistakes"
+  knowledge base.
 - A reference firmware example crate (Embassy/RTIC on a specific MCU).
 - A `defmt`-based logging variant of the continuous example for `no_std` users.
 - Property-based tests over the `to_raw` / `to_celsius` round-trip.
