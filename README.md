@@ -11,8 +11,10 @@ A `#[no_std]` platform-agnostic driver for the
 [TMP108](https://www.ti.com/lit/gpn/tmp108) temperature sensor using
 the [embedded-hal](https://docs.rs/embedded-hal) traits.
 
-The TMP108 can take one of 4 I2C addresses depending on the state of
-the A0 pin, as described in the table below:
+## I²C addresses
+
+The TMP108 can take one of 4 I²C addresses depending on the state of
+the A0 pin:
 
 | A0  | Addr |
 |-----|------|
@@ -21,60 +23,108 @@ the A0 pin, as described in the table below:
 | SDA | 0x4a |
 | SCL | 0x4b |
 
-The driver has specific constructors for each of these states, to
-ensure that an invalid address is not attempted.
+The driver has dedicated constructors for each — `new_with_a0_gnd`,
+`new_with_a0_vplus`, `new_with_a0_sda`, `new_with_a0_scl` — so an invalid
+address cannot be requested.
 
 ## Usage
 
+### Blocking one-shot read
+
+<!-- snippet: oneshot -->
 ```rust,ignore
-let delay = DelayNs;
-let mut tmp = Tmp108::new_with_a0_gnd(i2c, delay);
-// let mut tmp = Tmp108::new_with_a0_vplus(i2c, delay);
-// let mut tmp = Tmp108::new_with_a0_sda(i2c, delay);
-// let mut tmp = Tmp108::new_with_a0_scl(i2c, delay);
-// let mut tmp = Tmp108::new(i2c, delay, A0::Gnd);
+let hal = Hal::new();
+let i2c = hal.i2c();
 
-let cfg = Default::default()
-    .with_cm(ConversionMode::OneShot)
-    .with_tm(ThermostatMode::Comparator)
-    .with_cr(ConversionRate::Hertz16)
-    .with_hysteresis(Hysteresis::FourCelsius)
-    .with_polarity(Polarity::ActiveLow);
-
-tmp.set_configuration(cfg)?;
-
-let temp = tmp.temperature()?;
-
-let cfg = cfg
-    .with_cm(ConversionMode::OneShot)
-    .with_tm(ThermostatMode::Interrupt)
-    .with_cr(ConversionRate::Hertz1)
-    .with_fl(true)
-    .with_fh(true);
-
-tmp.set_configuration(cfg)?;
-
-let high_limit = 48.0;
-let low_limit = 26.5;
-
-tmp.set_low_limit(low_limit)?;
-tmp.set_high_limit(high_limit)?;
-
-tmp.continuous(Default::default(), |t| {
-	for _ in 0..10 {
-		let temp = tmp.wait_for_temperature()?;
-		info!("Temperature {}", temp);
-	}
-
-	Ok(())
-})?;
-
+let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+let temperature = tmp.temperature().map_err(|_| anyhow!("Failed to read temperature"))?;
+println!("Temperature: {temperature:.2} C");
 ```
+
+### Async continuous conversions
+
+<!-- snippet: continuous -->
+```rust,ignore
+let hal = Hal::new();
+let i2c = hal.i2c();
+let mut delay = hal.delay();
+
+let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+
+tmp.continuous(async |t| {
+    for _ in 0..5 {
+        let temperature = t.wait_for_temperature(&mut delay).await?;
+        println!("Temperature: {temperature:.2} C");
+    }
+    Ok(())
+})
+.await
+.map_err(|_| anyhow!("Continuous conversion failed"))?;
+```
+
+### Async interrupt-mode threshold alert
+
+<!-- snippet: alert -->
+```rust,ignore
+let mut tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
+
+tmp.tmp108
+    .configure(Config {
+        thermostat_mode: Thermostat::Interrupt,
+        alert_polarity: Polarity::ActiveLow,
+        ..Default::default()
+    })
+    .await
+    .map_err(|_| anyhow!("Failed to configure TMP108"))?;
+
+tmp.set_temperature_threshold_low(15.0)
+    .await
+    .map_err(|_| anyhow!("Failed to set low threshold"))?;
+tmp.set_temperature_threshold_high(30.0)
+    .await
+    .map_err(|_| anyhow!("Failed to set high threshold"))?;
+
+println!("Waiting for ALERT (warm the sensor above 30 C)...");
+let temperature = tmp
+    .wait_for_temperature_threshold()
+    .await
+    .map_err(|_| anyhow!("wait_for_temperature_threshold failed"))?;
+println!("ALERT! Temperature at trigger: {temperature:.2} C");
+```
+
+See `examples/` for complete, runnable versions of each snippet (and more).
+
+## Cargo features
+
+| Feature | Effect | Requires |
+|---------|--------|----------|
+| (none)  | Blocking `Tmp108` over `embedded-hal`. | — |
+| `async` | Async `Tmp108` over `embedded-hal-async`. `Tmp108::continuous` is unlocked. | — |
+| `embedded-sensors-hal` | Blocking `TemperatureSensor` impl on `Tmp108`. | — |
+| `embedded-sensors-hal-async` | Async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` impls on `Tmp108`, plus the `AlertTmp108` wrapper with `TemperatureThresholdWait`. | `async` |
+
+## Gotchas
+
+- **`Tmp108::new` does not take a delay.** The delay only appears on
+  `wait_for_temperature`, where it is genuinely needed to wait out a
+  conversion period.
+- **Comparator vs interrupt mode latching.** In comparator mode the ALERT pin
+  stays asserted until temperature returns inside `(T_low + HYS, T_high − HYS)`.
+  In interrupt mode the pin clears as soon as the configuration register is
+  read (the driver does this for you inside `wait_for_temperature_threshold`).
+  See `examples/alert_comparator.rs` for a demonstration.
+- **ALERT polarity is set on-chip.** Wire your pull resistor for the polarity
+  you configured. Examples assume active-low + external pull-up.
+- **`Tmp108::continuous` is async-only.** For blocking continuous-mode use,
+  call `configure(...)` to set `Mode::Continuous` manually, loop on
+  `wait_for_temperature(&mut delay)`, then call `shutdown()`.
+- **Temperature scale.** Raw register values are 12-bit signed in the upper
+  bits of a 16-bit register; the driver returns `f32` Celsius at
+  0.0625 °C/LSB.
 
 ## MSRV
 
-Currently, rust `1.85` and up is supported, but some previous versions
-may work.
+Rust 1.90 and up.
 
 ## License
 
@@ -85,6 +135,3 @@ Licensed under the terms of the [MIT license](http://opensource.org/licenses/MIT
 Unless you explicitly state otherwise, any contribution submitted for
 inclusion in the work by you shall be licensed under the terms of the
 MIT license.
-
-License: MIT
-
