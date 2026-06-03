@@ -422,9 +422,9 @@ dependencies = [
 
 [[package]]
 name = "heapless"
-version = "0.8.0"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
+checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
 dependencies = [
  "hash32 0.3.1",
  "stable_deref_trait",
@@ -522,15 +522,17 @@ dependencies = [
 
 [[package]]
 name = "maitake-sync"
-version = "0.1.2"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6816ab14147f80234c675b80ed6dc4f440d8a1cefc158e766067aedb84c0bcd5"
+checksum = "748f86d9befd480b602c3bebc9ef30dbf2f3dfc8acc4a73d07b90f0117e6de3f"
 dependencies = [
  "cordyceps",
  "loom",
+ "mutex-traits",
  "mycelium-bitfield",
  "pin-project",
  "portable-atomic",
+ "tracing",
 ]
 
 [[package]]
@@ -584,6 +586,12 @@ name = "memchr"
 version = "2.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
+
+[[package]]
+name = "mutex-traits"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3929f2b5633d29cf7b6624992e5f3c1e9334f1193423e12d17be4faf678cde3f"
 
 [[package]]
 name = "mycelium-bitfield"
@@ -716,22 +724,25 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "pico-de-gallo-hal"
-version = "0.1.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc711fd7d8c333ac344e434a61a90a9e9076cc7c9fdb9d7d790a4425a9187c0a"
+checksum = "707f9175f532e8089e98308fe509b15399e9283127c88809bfe35568728e4447"
 dependencies = [
  "embedded-hal 1.0.0",
  "embedded-hal-async",
+ "embedded-io 0.6.1",
+ "embedded-io-async",
  "pico-de-gallo-lib",
  "tokio",
 ]
 
 [[package]]
 name = "pico-de-gallo-internal"
-version = "0.1.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da5f5d62ccfc4edc551e404b9c7eb3a6cbeeca1aadb893983667b549ad76a7a0"
+checksum = "bb71531b6c61d7db9739654f8a16cde669111a494e7c315edb5f67fa4ef64c2d"
 dependencies = [
+ "postcard",
  "postcard-rpc",
  "postcard-schema",
  "serde",
@@ -739,9 +750,9 @@ dependencies = [
 
 [[package]]
 name = "pico-de-gallo-lib"
-version = "0.1.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e874d5446bd937d6f45cd34711f8e179c122c7eb1e5768e09d2575e6cac09da0"
+checksum = "b98d0fc74b1f65f8ee1dd1463253955cf23bcdf3dc13f0b0ea3867aa11863def"
 dependencies = [
  "embedded-hal 1.0.0",
  "nusb",
@@ -808,11 +819,11 @@ dependencies = [
 
 [[package]]
 name = "postcard-rpc"
-version = "0.11.15"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7e1944dfb9859e440511700c442edce3eacd5862f90f5a9997d004bd3553f3b"
+checksum = "d1b0f9cc8bd8f38f5893fb7f07626b1c8722b3166ead66cfb14b5c5d5352822c"
 dependencies = [
- "heapless 0.8.0",
+ "heapless 0.9.3",
  "maitake-sync",
  "nusb",
  "portable-atomic",
@@ -1142,14 +1153,15 @@ dependencies = [
  "embedded-sensors-hal-async",
  "maybe-async-cfg",
  "pico-de-gallo-hal",
+ "pico-de-gallo-lib",
  "tokio",
 ]
 
 [[package]]
 name = "tokio"
-version = "1.48.0"
+version = "1.52.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff360e02eab121e0bc37a2d3b4d4dc622e6eda3a8e5253d5435ecf5bd4c68408"
+checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
 dependencies = [
  "bytes",
  "pin-project-lite",
@@ -1158,9 +1170,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "2.6.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
+checksum = "385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496"
 dependencies = [
  "proc-macro2",
  "quote",
