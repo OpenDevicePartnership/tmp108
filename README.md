@@ -135,3 +135,7 @@ Licensed under the terms of the [MIT license](http://opensource.org/licenses/MIT
 Unless you explicitly state otherwise, any contribution submitted for
 inclusion in the work by you shall be licensed under the terms of the
 MIT license.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution workflow,
+including the [Conventional Commits](https://www.conventionalcommits.org/)
+v1.0.0 commit-message format this repository uses.
