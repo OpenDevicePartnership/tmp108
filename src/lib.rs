@@ -31,8 +31,10 @@ use embedded_hal_async::{delay::DelayNs as AsyncDelayNs, i2c::I2c as AsyncI2c};
 #[allow(unused)]
 mod inner;
 
+use crate::inner::Inner;
 use crate::inner::field_sets::{THigh, TLow};
-use crate::inner::{ConversionRate, Hysteresis, Inner, Mode, Polarity, Thermostat};
+
+pub use crate::inner::{ConversionRate, Hysteresis, Mode, Polarity, Thermostat};
 
 /// A0 pin logic level representation.
 #[derive(Debug, Default)]
