@@ -198,3 +198,27 @@ jobs:
 
       - name: cargo test (embedded-sensors-hal)
         run: cargo test --locked -F async,embedded-sensors-hal-async
+
+      - name: cargo test --doc (blocking)
+        run: cargo test --doc --locked
+
+      - name: cargo test --doc (async)
+        run: cargo test --doc --locked -F async
+
+      - name: cargo test --doc (embedded-sensors-hal-async)
+        run: cargo test --doc --locked -F async,embedded-sensors-hal-async
+
+      - name: cargo build --examples (default)
+        run: cargo build --examples --locked
+
+      - name: cargo build --examples (async)
+        run: cargo build --examples --locked -F async
+
+      - name: cargo build --examples (embedded-sensors-hal)
+        run: cargo build --examples --locked -F embedded-sensors-hal
+
+      - name: cargo build --examples (embedded-sensors-hal-async)
+        run: cargo build --examples --locked -F async,embedded-sensors-hal-async
+
+      - name: README snippets in sync
+        run: ./scripts/check-readme-snippets.sh
