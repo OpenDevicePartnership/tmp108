@@ -593,8 +593,7 @@ pub struct AlertTmp108<
     I2C: embedded_hal_async::i2c::I2c,
     ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin,
 > {
-    /// Underlying TMP108 sensor.
-    pub tmp108: AsyncTmp108<I2C>,
+    tmp108: AsyncTmp108<I2C>,
     alert: ALERT,
 }
 
@@ -607,18 +606,18 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::{A0, AlertTmp108};
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
     /// let tmp = AlertTmp108::new(i2c, A0::Sda, alert);
-    /// assert_eq!(tmp.tmp108.addr(), 0x4a);
+    /// assert_eq!(tmp.sensor().addr(), 0x4a);
     /// # let (mut i2c, mut alert) = tmp.destroy();
     /// # i2c.done();
     /// # alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn new(i2c: I2C, a0: A0, alert: ALERT) -> Self {
         let tmp108 = AsyncTmp108::new(i2c, a0);
@@ -631,18 +630,18 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::AlertTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
     /// let tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
-    /// assert_eq!(tmp.tmp108.addr(), 0x48);
+    /// assert_eq!(tmp.sensor().addr(), 0x48);
     /// # let (mut i2c, mut alert) = tmp.destroy();
     /// # i2c.done();
     /// # alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn new_with_a0_gnd(i2c: I2C, alert: ALERT) -> Self {
         Self::new(i2c, A0::Gnd, alert)
@@ -654,18 +653,18 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::AlertTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
     /// let tmp = AlertTmp108::new_with_a0_vplus(i2c, alert);
-    /// assert_eq!(tmp.tmp108.addr(), 0x49);
+    /// assert_eq!(tmp.sensor().addr(), 0x49);
     /// # let (mut i2c, mut alert) = tmp.destroy();
     /// # i2c.done();
     /// # alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn new_with_a0_vplus(i2c: I2C, alert: ALERT) -> Self {
         Self::new(i2c, A0::Vplus, alert)
@@ -677,18 +676,18 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::AlertTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
     /// let tmp = AlertTmp108::new_with_a0_sda(i2c, alert);
-    /// assert_eq!(tmp.tmp108.addr(), 0x4a);
+    /// assert_eq!(tmp.sensor().addr(), 0x4a);
     /// # let (mut i2c, mut alert) = tmp.destroy();
     /// # i2c.done();
     /// # alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn new_with_a0_sda(i2c: I2C, alert: ALERT) -> Self {
         Self::new(i2c, A0::Sda, alert)
@@ -700,21 +699,101 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::AlertTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
     /// let tmp = AlertTmp108::new_with_a0_scl(i2c, alert);
-    /// assert_eq!(tmp.tmp108.addr(), 0x4b);
+    /// assert_eq!(tmp.sensor().addr(), 0x4b);
     /// # let (mut i2c, mut alert) = tmp.destroy();
     /// # i2c.done();
     /// # alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn new_with_a0_scl(i2c: I2C, alert: ALERT) -> Self {
         Self::new(i2c, A0::Scl, alert)
+    }
+
+    /// Borrow the inner [`AsyncTmp108`] for sensor operations
+    /// (read temperature, configure, set thresholds…). Useful when you
+    /// want to call sensor methods directly, without going through the
+    /// alert-aware threshold trait.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::digital;
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AlertTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let alert = digital::Mock::new(&[]);
+    /// let tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
+    /// assert_eq!(tmp.sensor().addr(), 0x48);
+    /// # let (mut i2c, mut alert) = tmp.destroy();
+    /// # i2c.done();
+    /// # alert.done();
+    /// # });
+    /// ```
+    pub fn sensor(&self) -> &AsyncTmp108<I2C> {
+        &self.tmp108
+    }
+
+    /// Mutably borrow the inner [`AsyncTmp108`] for sensor operations.
+    /// See [`sensor`][Self::sensor].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::digital;
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::{AlertTmp108, Config};
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    /// ]);
+    /// let alert = digital::Mock::new(&[]);
+    /// let mut tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
+    /// let cfg = tmp.sensor_mut().read_configuration().await.unwrap();
+    /// assert_eq!(cfg, Config::default());
+    /// # let (mut i2c, mut alert) = tmp.destroy();
+    /// # i2c.done();
+    /// # alert.done();
+    /// # });
+    /// ```
+    pub fn sensor_mut(&mut self) -> &mut AsyncTmp108<I2C> {
+        &mut self.tmp108
+    }
+
+    /// Destructure the wrapper back into its [`AsyncTmp108`] sensor and
+    /// ALERT pin halves. The inverse of [`AsyncTmp108::into_alert`].
+    ///
+    /// Unlike [`destroy`][Self::destroy] (which returns the raw I2C
+    /// bus, dropping the sensor's typed wrapper), this preserves the
+    /// sensor's state so the caller can continue using it directly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::digital;
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AlertTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let alert = digital::Mock::new(&[]);
+    /// let tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
+    /// let (sensor, alert) = tmp.into_inner();
+    /// // The sensor still owns the I2C bus.
+    /// let mut i2c = sensor.destroy();
+    /// i2c.done();
+    /// let mut alert = alert;
+    /// alert.done();
+    /// # });
+    /// ```
+    pub fn into_inner(self) -> (AsyncTmp108<I2C>, ALERT) {
+        (self.tmp108, self.alert)
     }
 
     /// Destroy the driver instance, return the I2C bus instance and ALERT pin instance.
@@ -722,9 +801,9 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::AlertTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
@@ -732,7 +811,7 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// let (mut i2c, mut alert) = tmp.destroy();
     /// i2c.done();
     /// alert.done();
-    /// # }
+    /// # });
     /// ```
     pub fn destroy(self) -> (I2C, ALERT) {
         (self.tmp108.destroy(), self.alert)
@@ -2588,7 +2667,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let result = tmp108.tmp108.configure(cfg).await;
+            let result = tmp108.sensor_mut().configure(cfg).await;
             assert!(result.is_ok());
 
             // Set alert thresholds
@@ -2731,7 +2810,7 @@ mod tests {
                 alert_polarity: Polarity::ActiveLow,
                 ..Default::default()
             };
-            tmp108.tmp108.configure(cfg).await.unwrap();
+            tmp108.sensor_mut().configure(cfg).await.unwrap();
 
             let result = tmp108.wait_for_temperature_threshold().await;
             match result {

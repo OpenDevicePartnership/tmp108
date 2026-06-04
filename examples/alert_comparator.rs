@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
 
-    tmp.tmp108
+    tmp.sensor_mut()
         .configure(Config {
             thermostat_mode: Thermostat::Comparator,
             alert_polarity: Polarity::ActiveLow,
