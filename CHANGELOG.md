@@ -4,6 +4,74 @@ All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-06-04
+
+An architectural refactor: the single `maybe-async-cfg`-generated
+`Tmp108<I2C>` is replaced by two named driver types, **`Tmp108`** for
+the blocking flavor and **`AsyncTmp108`** for the async flavor. Both
+are now available simultaneously when both relevant features are
+enabled. The shared register codec lives in a new private `mod ops`.
+
+### Breaking
+
+- The async driver type is now `AsyncTmp108<I2C>` (was `Tmp108<I2C>`
+  under `feature = "async"`). The blocking `Tmp108<I2C>` is
+  unchanged. **Migration:** in async code, replace `use tmp108::Tmp108;`
+  with `use tmp108::AsyncTmp108;` and rename references accordingly.
+- `AlertTmp108::tmp108` is no longer a public field. **Migration:**
+  use the new `sensor()` / `sensor_mut()` accessors, or `into_inner()`
+  to destructure into `(AsyncTmp108<I2C>, ALERT)`.
+- The `embedded-sensors-hal-async` feature now implicitly enables
+  `async` (it was previously possible to build dead code by enabling
+  the trait feature without `async`). Callers who listed both
+  explicitly are unaffected.
+- `Tmp108::into_alert` is removed; the equivalent now lives only on
+  `AsyncTmp108::into_alert`, where it is the correct flavor (the
+  bare blocking driver never had a coherent path to the async-only
+  `AlertTmp108` wrapper).
+- `AsyncTmp108::continuous` is async-only and lives only on the
+  async driver type (it previously lived on `Tmp108` under
+  `feature = "async"` and was awkwardly cfg-gated within a
+  maybe-async-cfg'd impl block).
+
+### Added
+
+- `AsyncTmp108<I2C>` driver type, parallel in surface to `Tmp108`.
+  Both flavors expose: `new`, `new_with_a0_gnd/vplus/sda/scl`,
+  `addr`, `destroy`, `probe`, `read_configuration`, `configure`,
+  `temperature`, `one_shot`, `shutdown`, `wait_for_temperature`,
+  `low_limit`, `set_low_limit`, `high_limit`, `set_high_limit`.
+  `AsyncTmp108` additionally provides `continuous` and
+  `into_alert`.
+- `AlertTmp108::sensor() -> &AsyncTmp108<I2C>` and
+  `AlertTmp108::sensor_mut() -> &mut AsyncTmp108<I2C>` replace the
+  former `pub tmp108` field.
+- `AlertTmp108::into_inner(self) -> (AsyncTmp108<I2C>, ALERT)` —
+  inverse of `AsyncTmp108::into_alert`.
+- `Eq` and `Hash` on `Config`.
+- Conditional `Clone`, `Copy`, `PartialEq`, `Eq` on `Error<E, P>`
+  (when `E` and `P` implement the corresponding trait).
+- First-class doctest coverage for the async driver. Doctest count
+  with `--all-features` rises from 18 to 47.
+
+### Internal
+
+- The driver no longer depends on `maybe-async-cfg`. The two driver
+  types are written out directly and share their meaningful logic
+  through a private `mod ops` of pure functions
+  (`to_celsius`, `to_raw`, `snap_hysteresis`, `decode_config`,
+  `apply_config`, plus the relevant constants).
+- The internal `Interface` is split into a blocking `Interface`
+  (always available) and an async `AsyncInterface`
+  (`#[cfg(feature = "async")]`). Each implements the matching
+  `device-driver` register-interface trait.
+- The `# fn main()` doctest workaround (formerly Gotcha 3 in
+  AGENTS.md) is gone — each type has its own doctests with the
+  correct shape for its flavor.
+- `cargo hack --feature-powerset` matrix shrinks from 8 to 6 legal
+  combinations (the two combos that disabled `async` while enabling
+  `embedded-sensors-hal-async` are gone).
+
 ## [0.6.0] — 2026-06-03
 
 A reliability-focused release. Several `Error` paths and `Tmp108`
