@@ -643,11 +643,33 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     }
 
     #[cfg(feature = "async")]
-    /// Initiate continuous conversions
+    /// Initiate continuous conversions.
+    ///
+    /// Switches the chip into [`Mode::Continuous`], runs the user-supplied
+    /// closure, and unconditionally returns the chip to [`Mode::Shutdown`]
+    /// before returning, **regardless of whether the closure succeeded or
+    /// failed**. This ensures the chip is not left burning current after
+    /// a transient bus failure inside the closure.
+    ///
+    /// # Cancel-safety
+    ///
+    /// **The returned future is *not* cancel-safe.** If it is dropped
+    /// before completion (e.g. by `embassy_futures::select!`,
+    /// `tokio::time::timeout`, or a task cancellation), the chip is left
+    /// in [`Mode::Continuous`] and will continue to draw current
+    /// indefinitely. Callers that need cancellation must structure their
+    /// own recovery, for example by calling
+    /// [`shutdown`][Self::shutdown] after a cancelled call.
     ///
     /// # Errors
     ///
-    /// `I2C::Error` when the I2C transaction fails
+    /// - If the closure returns `Err(e)`, the cleanup `shutdown()` still
+    ///   runs but its result is discarded; the closure's error is
+    ///   returned.
+    /// - If the closure returns `Ok(())` and the cleanup `shutdown()`
+    ///   fails, that I2C error is returned.
+    /// - If the initial transition into `Mode::Continuous` fails, the
+    ///   closure is not invoked and the I2C error is returned.
     ///
     /// # Examples
     ///
@@ -683,8 +705,14 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
             .modify_async(|r| r.set_m(Mode::Continuous))
             .await?;
 
-        f(self).await?;
-        self.shutdown().await
+        // Run the user closure and capture its result, but always attempt
+        // shutdown afterwards so the chip is not left in Continuous mode.
+        // The closure's error takes precedence over a shutdown failure:
+        // the user's failure is the actionable signal, the cleanup error
+        // is a secondary symptom.
+        let user_result = f(self).await;
+        let cleanup_result = self.shutdown().await;
+        user_result.and(cleanup_result)
     }
 
     /// Wait for conversion to complete. This method will block for the amount
@@ -1689,6 +1717,78 @@ mod tests {
                 assert!(matches!(tmp108.set_low_limit(bad).await, Err(Error::InvalidInput)));
                 assert!(matches!(tmp108.set_high_limit(bad).await, Err(Error::InvalidInput)));
             }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn continuous_runs_shutdown_when_closure_returns_err() {
+            // Expectations:
+            //  1. Enter Continuous: read cfg, write cfg with M=Continuous.
+            //  2. Closure causes one temperature read that returns a bus error.
+            //  3. Cleanup must still run: read cfg, write cfg with M=Shutdown.
+            //
+            // If the cleanup is skipped (the pre-fix behavior) the mock will
+            // panic at destroy() because the last two expectations were not
+            // consumed.
+            let expectations = vec![
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),
+                Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00])
+                    .with_error(embedded_hal::i2c::ErrorKind::Other),
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x20, 0x10]),
+            ];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            let result = tmp108
+                .continuous(async |t| {
+                    let _ = t.temperature().await?;
+                    Ok(())
+                })
+                .await;
+
+            // The closure's error must be propagated (closure error wins
+            // over shutdown success).
+            assert!(result.is_err());
+
+            // All five expected transactions consumed -> the cleanup
+            // shutdown ran.
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn continuous_returns_closure_error_when_shutdown_also_fails() {
+            use embedded_hal_async::i2c::Error as _;
+
+            // Closure fails AND shutdown fails. The closure's error must win.
+            let closure_err = embedded_hal::i2c::ErrorKind::Bus;
+            let shutdown_err = embedded_hal::i2c::ErrorKind::ArbitrationLoss;
+
+            let expectations = vec![
+                // Enter Continuous.
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x22, 0x10]),
+                // Closure errors.
+                Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00]).with_error(closure_err),
+                // Shutdown read errors too.
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]).with_error(shutdown_err),
+            ];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            let result = tmp108
+                .continuous(async |t| {
+                    let _ = t.temperature().await?;
+                    Ok(())
+                })
+                .await;
+
+            // Must propagate the closure error, not the shutdown error.
+            assert_eq!(result.err().map(|e| e.kind()), Some(closure_err));
 
             let mut mock = tmp108.destroy();
             mock.done();
