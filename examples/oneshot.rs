@@ -16,10 +16,11 @@
 
 use anyhow::{Result, anyhow};
 use pico_de_gallo_hal::Hal;
-use tmp108::Tmp108;
 
 #[cfg(not(feature = "async"))]
 fn main() -> Result<()> {
+    use tmp108::Tmp108;
+
     // README-SNIPPET-START: oneshot
     let hal = Hal::new();
     let i2c = hal.i2c();
@@ -35,10 +36,12 @@ fn main() -> Result<()> {
 #[cfg(feature = "async")]
 #[tokio::main]
 async fn main() -> Result<()> {
+    use tmp108::AsyncTmp108;
+
     let hal = Hal::new();
     let i2c = hal.i2c();
 
-    let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
     let temperature = tmp
         .temperature()
         .await

@@ -7,11 +7,13 @@
 //!
 //! # Cargo features
 //!
-//! This example is **async only**. Requires `--features async`. The blocking
-//! `Tmp108` API does not expose a `continuous` closure helper; if you need
-//! continuous-mode conversions in a blocking context, call `configure(...)`
-//! to set the M bits to `Mode::Continuous` manually, loop on
-//! `wait_for_temperature(&mut delay)`, then call `shutdown()` when done.
+//! This example is **async only**. Requires `--features async`. The
+//! blocking [`tmp108::Tmp108`] API does not expose a `continuous`
+//! closure helper; if you need continuous-mode conversions in a
+//! blocking context, call `configure(...)` to set the M bits to
+//! `Mode::Continuous` manually, loop on
+//! `wait_for_temperature(&mut delay)`, then call `shutdown()` when
+//! done.
 //!
 //! # Register interactions
 //!
@@ -31,14 +33,14 @@ fn main() {
 async fn main() -> anyhow::Result<()> {
     use anyhow::anyhow;
     use pico_de_gallo_hal::Hal;
-    use tmp108::Tmp108;
+    use tmp108::AsyncTmp108;
 
     // README-SNIPPET-START: continuous
     let hal = Hal::new();
     let i2c = hal.i2c();
     let mut delay = hal.delay();
 
-    let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
 
     tmp.continuous(async |t| {
         for _ in 0..5 {

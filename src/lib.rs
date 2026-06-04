@@ -13,8 +13,8 @@
 //! ## I²C bus ownership
 //!
 //! The driver assumes single-master ownership of the TMP108. Several
-//! methods (notably [`Tmp108::configure`], [`Tmp108::one_shot`], and
-//! [`Tmp108::shutdown`]) perform a read-modify-write on the
+//! methods (notably `configure`, `one_shot`, and `shutdown` on both
+//! [`Tmp108`] and [`AsyncTmp108`]) perform a read-modify-write on the
 //! configuration register as two distinct I²C transactions. On a
 //! multi-master bus, a second master writing to register `0x01`
 //! between the read and the write will silently lose those writes —
@@ -24,16 +24,18 @@
 //!
 //! ## Driver lifecycle on drop
 //!
-//! Dropping a [`Tmp108`] or [`AlertTmp108`] does **not** change the
-//! chip's operating mode. The chip retains whatever `M` bits were last
-//! written. If you want the chip to stop drawing current after the
-//! driver goes out of scope, call [`Tmp108::shutdown`] (or finish a
-//! [`Tmp108::continuous`] call cleanly) before dropping.
+//! Dropping a [`Tmp108`], [`AsyncTmp108`] or [`AlertTmp108`] does
+//! **not** change the chip's operating mode. The chip retains whatever
+//! `M` bits were last written. If you want the chip to stop drawing
+//! current after the driver goes out of scope, call
+//! [`Tmp108::shutdown`] or [`AsyncTmp108::shutdown`] (or finish an
+//! [`AsyncTmp108::continuous`] call cleanly) before dropping.
 //!
 //! In particular, dropping the future returned by
-//! [`Tmp108::continuous`] mid-flight (e.g. via `embassy_futures::select!`
-//! or `tokio::time::timeout`) leaves the chip in `Mode::Continuous`
-//! indefinitely. See the cancel-safety note on that method.
+//! [`AsyncTmp108::continuous`] mid-flight (e.g. via
+//! `embassy_futures::select!` or `tokio::time::timeout`) leaves the
+//! chip in `Mode::Continuous` indefinitely. See the cancel-safety note
+//! on that method.
 
 #![doc(html_root_url = "https://docs.rs/tmp108/latest")]
 #![doc = include_str!("../README.md")]
@@ -41,12 +43,13 @@
 
 #[cfg(feature = "async")]
 use device_driver::AsyncRegisterInterface;
-#[cfg(not(feature = "async"))]
 use device_driver::RegisterInterface;
-#[cfg(not(feature = "async"))]
-use embedded_hal::{delay::DelayNs, i2c::I2c};
+use embedded_hal::delay::DelayNs;
+use embedded_hal::i2c::I2c;
 #[cfg(feature = "async")]
-use embedded_hal_async::{delay::DelayNs as AsyncDelayNs, i2c::I2c as AsyncI2c};
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c as AsyncI2c;
 
 #[allow(clippy::all)]
 #[allow(clippy::pedantic)]
@@ -230,33 +233,42 @@ pub(crate) mod ops {
 }
 
 /// Tmp108 device driver.
-#[maybe_async_cfg::maybe(
-    sync(cfg(not(feature = "async")), self = "Tmp108", idents(AsyncI2c(sync = "I2c"))),
-    async(feature = "async", keep_self)
-)]
-pub struct Tmp108<I2C: AsyncI2c> {
+/// Blocking TMP108 driver.
+///
+/// Built on [`embedded_hal::i2c::I2c`]. The driver owns the I2C bus
+/// for the lifetime of any operation; you can recover the bus by
+/// calling [`destroy`][Self::destroy].
+///
+/// For the asynchronous flavor, see [`AsyncTmp108`].
+pub struct Tmp108<I2C: I2c> {
     inner: Inner<Interface<I2C>>,
 }
 
-#[maybe_async_cfg::maybe(
-    sync(cfg(not(feature = "async")), self = "Tmp108", idents(AsyncI2c(sync = "I2c"))),
-    async(feature = "async", keep_self)
-)]
-impl<I2C: AsyncI2c> Tmp108<I2C> {
+/// Asynchronous TMP108 driver.
+///
+/// Built on [`embedded_hal_async::i2c::I2c`]. The async flavor unlocks
+/// [`AsyncTmp108::continuous`] (which has no blocking equivalent) and
+/// is required by [`AlertTmp108`].
+///
+/// For the blocking flavor, see [`Tmp108`].
+#[cfg(feature = "async")]
+pub struct AsyncTmp108<I2C: AsyncI2c> {
+    inner: Inner<AsyncInterface<I2C>>,
+}
+
+impl<I2C: I2c> Tmp108<I2C> {
     /// Create a new TMP108 instance.
     ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::{A0, Tmp108};
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new(i2c, A0::Sda);
     /// assert_eq!(tmp.addr(), 0x4a);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn new(i2c: I2C, a0: A0) -> Self {
         let interface = Interface::new(i2c, a0);
@@ -272,14 +284,12 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_gnd(i2c);
     /// assert_eq!(tmp.addr(), 0x48);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn new_with_a0_gnd(i2c: I2C) -> Self {
         Self::new(i2c, A0::Gnd)
@@ -292,14 +302,12 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_vplus(i2c);
     /// assert_eq!(tmp.addr(), 0x49);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn new_with_a0_vplus(i2c: I2C) -> Self {
         Self::new(i2c, A0::Vplus)
@@ -312,14 +320,12 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_sda(i2c);
     /// assert_eq!(tmp.addr(), 0x4a);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn new_with_a0_sda(i2c: I2C) -> Self {
         Self::new(i2c, A0::Sda)
@@ -332,14 +338,12 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_scl(i2c);
     /// assert_eq!(tmp.addr(), 0x4b);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn new_with_a0_scl(i2c: I2C) -> Self {
         Self::new(i2c, A0::Scl)
@@ -351,14 +355,12 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_gnd(i2c);
     /// assert_eq!(tmp.addr(), 0x48);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
     pub fn addr(&self) -> u8 {
         self.inner.interface.addr
@@ -370,37 +372,178 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[]);
     /// let tmp = Tmp108::new_with_a0_gnd(i2c);
     /// let mut i2c = tmp.destroy();
     /// i2c.done();
-    /// # }
+    /// ```
+    pub fn destroy(self) -> I2C {
+        self.inner.interface.i2c
+    }
+}
+
+#[cfg(feature = "async")]
+impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
+    /// Create a new TMP108 instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::{A0, AsyncTmp108};
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new(i2c, A0::Sda);
+    /// assert_eq!(tmp.addr(), 0x4a);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn new(i2c: I2C, a0: A0) -> Self {
+        let interface = AsyncInterface::new(i2c, a0);
+        let inner = Inner::new(interface);
+
+        Self { inner }
+    }
+
+    /// Create a new TMP108 instance with A0 tied to GND, resulting in
+    /// an instance responding to address `0x48`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// assert_eq!(tmp.addr(), 0x48);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn new_with_a0_gnd(i2c: I2C) -> Self {
+        Self::new(i2c, A0::Gnd)
+    }
+
+    /// Create a new TMP108 instance with A0 tied to V+, resulting in
+    /// an instance responding to address `0x49`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_vplus(i2c);
+    /// assert_eq!(tmp.addr(), 0x49);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn new_with_a0_vplus(i2c: I2C) -> Self {
+        Self::new(i2c, A0::Vplus)
+    }
+
+    /// Create a new TMP108 instance with A0 tied to SDA, resulting in
+    /// an instance responding to address `0x4a`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_sda(i2c);
+    /// assert_eq!(tmp.addr(), 0x4a);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn new_with_a0_sda(i2c: I2C) -> Self {
+        Self::new(i2c, A0::Sda)
+    }
+
+    /// Create a new TMP108 instance with A0 tied to SCL, resulting in
+    /// an instance responding to address `0x4b`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_scl(i2c);
+    /// assert_eq!(tmp.addr(), 0x4b);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn new_with_a0_scl(i2c: I2C) -> Self {
+        Self::new(i2c, A0::Scl)
+    }
+
+    /// Get the current I2C address
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// assert_eq!(tmp.addr(), 0x48);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub fn addr(&self) -> u8 {
+        self.inner.interface.addr
+    }
+
+    /// Destroy the driver instance, return the I2C bus instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::Mock;
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[]);
+    /// let tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// let mut i2c = tmp.destroy();
+    /// i2c.done();
+    /// # });
     /// ```
     pub fn destroy(self) -> I2C {
         self.inner.interface.i2c
     }
 
-    /// Create a new `AlertTmp108` instance by consuming the original Tmp108 instance.
+    /// Create a new [`AlertTmp108`] instance by consuming the original
+    /// `AsyncTmp108` instance.
     ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::digital;
     /// # use embedded_hal_mock::eh1::i2c::Mock;
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[]);
     /// let alert = digital::Mock::new(&[]);
-    /// let tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let tmp = AsyncTmp108::new_with_a0_gnd(i2c);
     /// let alert_tmp = tmp.into_alert(alert);
     /// let (mut i2c, mut alert) = alert_tmp.destroy();
     /// i2c.done();
     /// alert.done();
-    /// # }
+    /// # });
     /// ```
-    #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+    #[cfg(feature = "embedded-sensors-hal-async")]
     pub fn into_alert<ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin>(
         self,
         alert: ALERT,
@@ -451,7 +594,7 @@ pub struct AlertTmp108<
     ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin,
 > {
     /// Underlying TMP108 sensor.
-    pub tmp108: Tmp108<I2C>,
+    pub tmp108: AsyncTmp108<I2C>,
     alert: ALERT,
 }
 
@@ -478,7 +621,7 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     /// # }
     /// ```
     pub fn new(i2c: I2C, a0: A0, alert: ALERT) -> Self {
-        let tmp108 = Tmp108::new(i2c, a0);
+        let tmp108 = AsyncTmp108::new(i2c, a0);
         Self { tmp108, alert }
     }
 
@@ -596,15 +739,7 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     }
 }
 
-#[maybe_async_cfg::maybe(
-    sync(
-        cfg(not(feature = "async")),
-        self = "Tmp108",
-        idents(AsyncI2c(sync = "I2c"), AsyncDelayNs(sync = "DelayNs"))
-    ),
-    async(feature = "async", keep_self)
-)]
-impl<I2C: AsyncI2c> Tmp108<I2C> {
+impl<I2C: I2c> Tmp108<I2C> {
     /// Probe the chip's presence by reading the configuration register.
     ///
     /// The TMP108 does not expose a `WHO_AM_I` / device-ID register, so a
@@ -633,16 +768,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C read fails.
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// // Chip returns the POR configuration -> probe() reports true.
     /// let i2c = Mock::new(&[
@@ -652,15 +781,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// assert!(tmp.probe().unwrap());
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn probe(&mut self) -> Result<bool, I2C::Error> {
-        #[cfg(feature = "async")]
-        let raw = self.inner.configuration().read_async().await?;
-
-        #[cfg(not(feature = "async"))]
+    pub fn probe(&mut self) -> Result<bool, I2C::Error> {
         let raw = self.inner.configuration().read()?;
-
         Ok(u16::from_le_bytes(raw.into()) == ops::POR_CONFIG)
     }
 
@@ -670,16 +793,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::{Config, Tmp108};
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
@@ -689,15 +806,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// assert_eq!(cfg, Config::default());
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn read_configuration(&mut self) -> Result<Config, I2C::Error> {
-        #[cfg(feature = "async")]
-        let c = self.inner.configuration().read_async().await?;
-
-        #[cfg(not(feature = "async"))]
+    pub fn read_configuration(&mut self) -> Result<Config, I2C::Error> {
         let c = self.inner.configuration().read()?;
-
         Ok(ops::decode_config(c))
     }
 
@@ -707,16 +818,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::{Config, ConversionRate, Hysteresis, Polarity, Thermostat, Tmp108};
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
@@ -731,20 +836,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// }).unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn configure(&mut self, config: Config) -> Result<(), I2C::Error> {
-        #[cfg(feature = "async")]
-        let res = self
-            .inner
-            .configuration()
-            .modify_async(|r| ops::apply_config(r, config))
-            .await;
-
-        #[cfg(not(feature = "async"))]
-        let res = self.inner.configuration().modify(|r| ops::apply_config(r, config));
-
-        res
+    pub fn configure(&mut self, config: Config) -> Result<(), I2C::Error> {
+        self.inner.configuration().modify(|r| ops::apply_config(r, config))
     }
 
     /// Read the temperature sensor
@@ -753,16 +847,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00]),
@@ -772,16 +860,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// assert!((temp - 50.0).abs() < 0.01);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn temperature(&mut self) -> Result<f32, I2C::Error> {
-        #[cfg(feature = "async")]
-        let res = self.inner.temperature().read_async().await;
-
-        #[cfg(not(feature = "async"))]
-        let res = self.inner.temperature().read();
-
-        let raw = res?;
+    pub fn temperature(&mut self) -> Result<f32, I2C::Error> {
+        let raw = self.inner.temperature().read()?;
         Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
@@ -791,16 +872,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
@@ -810,20 +885,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// tmp.one_shot().unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn one_shot(&mut self) -> Result<(), I2C::Error> {
-        #[cfg(feature = "async")]
-        let res = self
-            .inner
-            .configuration()
-            .modify_async(|r| r.set_m(Mode::OneShot))
-            .await;
-
-        #[cfg(not(feature = "async"))]
-        let res = self.inner.configuration().modify(|r| r.set_m(Mode::OneShot));
-
-        res
+    pub fn one_shot(&mut self) -> Result<(), I2C::Error> {
+        self.inner.configuration().modify(|r| r.set_m(Mode::OneShot))
     }
 
     /// Place device in shutdown mode
@@ -832,16 +896,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
     /// use tmp108::Tmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
@@ -851,23 +909,351 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// tmp.shutdown().unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
     /// ```
-    pub async fn shutdown(&mut self) -> Result<(), I2C::Error> {
-        #[cfg(feature = "async")]
-        let res = self
-            .inner
-            .configuration()
-            .modify_async(|r| r.set_m(Mode::Shutdown))
-            .await;
-
-        #[cfg(not(feature = "async"))]
-        let res = self.inner.configuration().modify(|r| r.set_m(Mode::Shutdown));
-
-        res
+    pub fn shutdown(&mut self) -> Result<(), I2C::Error> {
+        self.inner.configuration().modify(|r| r.set_m(Mode::Shutdown))
     }
 
-    #[cfg(feature = "async")]
+    /// Wait one conversion period, then read the temperature register.
+    ///
+    /// Reads the configuration register to discover the current
+    /// [`ConversionRate`], delays for one period (1/CR), and then reads
+    /// the temperature register. Intended for callers driving the chip
+    /// in [`Mode::Continuous`] who want to align reads with the chip's
+    /// conversion cadence.
+    ///
+    /// # Stale-reading on first call
+    ///
+    /// The TMP108's conversion period (1/CR — 4 s, 1 s, 250 ms, or
+    /// 62.5 ms) is **not** the same as its conversion **time** (~30 ms
+    /// regardless of CR). After entering [`Mode::Continuous`] the chip's
+    /// next conversion is not phase-aligned with when you enabled it,
+    /// so the first call to this method may return the previous
+    /// conversion result. For "guaranteed fresh" semantics, use
+    /// [`one_shot`][Self::one_shot] followed by a delay of one period
+    /// and a [`temperature`][Self::temperature] read, or discard the
+    /// first reading after entering Continuous.
+    ///
+    /// # I²C cost per call
+    ///
+    /// Each call performs **two** I²C transactions: a configuration
+    /// read (to determine the CR) and a temperature read. Callers in
+    /// power- or bandwidth-sensitive loops who know they will not
+    /// change CR can avoid the per-call configuration read by calling
+    /// [`read_configuration`][Self::read_configuration] once, computing
+    /// the period delay themselves, and calling
+    /// [`temperature`][Self::temperature] directly.
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when either the configuration read or the
+    /// temperature read fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::delay::NoopDelay;
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    ///     Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let mut delay = NoopDelay::new();
+    /// let temp = tmp.wait_for_temperature(&mut delay).unwrap();
+    /// assert!((temp - 50.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// ```
+    pub fn wait_for_temperature<DELAY: DelayNs>(&mut self, delay: &mut DELAY) -> Result<f32, I2C::Error> {
+        let config = self.read_configuration()?;
+        delay.delay_us(conversion_period_us(config.conversion_rate));
+        self.temperature()
+    }
+
+    /// Read temperature low limit register
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x02], vec![0x19, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.low_limit().unwrap();
+    /// assert!((limit - 25.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// ```
+    pub fn low_limit(&mut self) -> Result<f32, I2C::Error> {
+        let raw = self.inner.t_low().read()?;
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
+    }
+
+    /// Set temperature low limit register
+    ///
+    /// # Errors
+    ///
+    /// - `Error::InvalidInput` if `limit` is NaN, ±∞, or outside
+    ///   `[-128.0, 127.9375] °C` (the representable range of the chip's
+    ///   12-bit fixed-point limit register).
+    /// - `Error::Bus` when the I2C transaction fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write(0x48, vec![0x02, 0x19, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_low_limit(25.0).unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// ```
+    pub fn set_low_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
+        let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
+        self.inner.t_low().write(|r| *r = TLow::from(raw)).map_err(Error::Bus)
+    }
+
+    /// Read temperature high limit register
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x03], vec![0x50, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.high_limit().unwrap();
+    /// assert!((limit - 80.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// ```
+    pub fn high_limit(&mut self) -> Result<f32, I2C::Error> {
+        let raw = self.inner.t_high().read()?;
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
+    }
+
+    /// Set temperature high limit register
+    ///
+    /// # Errors
+    ///
+    /// - `Error::InvalidInput` if `limit` is NaN, ±∞, or outside
+    ///   `[-128.0, 127.9375] °C` (the representable range of the chip's
+    ///   12-bit fixed-point limit register).
+    /// - `Error::Bus` when the I2C transaction fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::Tmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write(0x48, vec![0x03, 0x50, 0x00]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_high_limit(80.0).unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// ```
+    pub fn set_high_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
+        let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
+        self.inner.t_high().write(|r| *r = THigh::from(raw)).map_err(Error::Bus)
+    }
+}
+
+#[cfg(feature = "async")]
+impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
+    /// Probe the chip's presence by reading the configuration register.
+    ///
+    /// See [`Tmp108::probe`] for full semantics. The async flavor has
+    /// the same `Ok(true)` / `Ok(false)` / `Err(_)` contract.
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C read fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// assert!(tmp.probe().await.unwrap());
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn probe(&mut self) -> Result<bool, I2C::Error> {
+        let raw = self.inner.configuration().read_async().await?;
+        Ok(u16::from_le_bytes(raw.into()) == ops::POR_CONFIG)
+    }
+
+    /// Read configuration register
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::{AsyncTmp108, Config};
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// let cfg = tmp.read_configuration().await.unwrap();
+    /// assert_eq!(cfg, Config::default());
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn read_configuration(&mut self) -> Result<Config, I2C::Error> {
+        let c = self.inner.configuration().read_async().await?;
+        Ok(ops::decode_config(c))
+    }
+
+    /// Configure device parameters.
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::{AsyncTmp108, Config, ConversionRate, Hysteresis, Polarity, Thermostat};
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    ///     Transaction::write(0x48, vec![0x01, 0x66, 0xb0]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// tmp.configure(Config {
+    ///     thermostat_mode: Thermostat::Interrupt,
+    ///     alert_polarity: Polarity::ActiveHigh,
+    ///     conversion_rate: ConversionRate::_16Hz,
+    ///     hysteresis: Hysteresis::_4C,
+    /// }).await.unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn configure(&mut self, config: Config) -> Result<(), I2C::Error> {
+        self.inner
+            .configuration()
+            .modify_async(|r| ops::apply_config(r, config))
+            .await
+    }
+
+    /// Read the temperature sensor
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// let temp = tmp.temperature().await.unwrap();
+    /// assert!((temp - 50.0).abs() < 0.01);
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn temperature(&mut self) -> Result<f32, I2C::Error> {
+        let raw = self.inner.temperature().read_async().await?;
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
+    }
+
+    /// Configure device for one-shot conversion
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    ///     Transaction::write(0x48, vec![0x01, 0x21, 0x10]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// tmp.one_shot().await.unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn one_shot(&mut self) -> Result<(), I2C::Error> {
+        self.inner
+            .configuration()
+            .modify_async(|r| r.set_m(Mode::OneShot))
+            .await
+    }
+
+    /// Place device in shutdown mode
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C transaction fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::AsyncTmp108;
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    ///     Transaction::write(0x48, vec![0x01, 0x20, 0x10]),
+    /// ]);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// tmp.shutdown().await.unwrap();
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # });
+    /// ```
+    pub async fn shutdown(&mut self) -> Result<(), I2C::Error> {
+        self.inner
+            .configuration()
+            .modify_async(|r| r.set_m(Mode::Shutdown))
+            .await
+    }
+
     /// Initiate continuous conversions.
     ///
     /// Switches the chip into [`Mode::Continuous`], runs the user-supplied
@@ -899,9 +1285,9 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # Examples
     ///
     /// ```
-    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
     /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
-    /// use tmp108::Tmp108;
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     // Enter continuous: read cfg, modify M bits, write back.
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
@@ -912,7 +1298,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
     ///     Transaction::write(0x48, vec![0x01, 0x20, 0x10]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
     /// tmp.continuous(async |t| {
     ///     let _ = t.temperature().await?;
     ///     Ok(())
@@ -942,75 +1328,36 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
 
     /// Wait one conversion period, then read the temperature register.
     ///
-    /// Reads the configuration register to discover the current
-    /// [`ConversionRate`], delays for one period (1/CR), and then reads
-    /// the temperature register. Intended for callers driving the chip
-    /// in [`Mode::Continuous`] (typically from inside a
-    /// [`continuous`][Self::continuous] closure) who want to align
-    /// reads with the chip's conversion cadence.
-    ///
-    /// # Stale-reading on first call
-    ///
-    /// The TMP108's conversion period (1/CR — 4 s, 1 s, 250 ms, or
-    /// 62.5 ms) is **not** the same as its conversion **time** (~30 ms
-    /// regardless of CR). After entering [`Mode::Continuous`] the chip's
-    /// next conversion is not phase-aligned with when you enabled it,
-    /// so the first call to this method may return the previous
-    /// conversion result. For "guaranteed fresh" semantics, use
-    /// [`one_shot`][Self::one_shot] followed by a delay of one period
-    /// and a [`temperature`][Self::temperature] read, or discard the
-    /// first reading after entering Continuous.
-    ///
-    /// # I²C cost per call
-    ///
-    /// Each call performs **two** I²C transactions: a configuration
-    /// read (to determine the CR) and a temperature read. Callers in
-    /// power- or bandwidth-sensitive loops who know they will not
-    /// change CR can avoid the per-call configuration read by calling
-    /// [`read_configuration`][Self::read_configuration] once, computing
-    /// the period delay themselves, and calling
-    /// [`temperature`][Self::temperature] directly.
+    /// See [`Tmp108::wait_for_temperature`] for the full semantics,
+    /// including the stale-first-reading and per-call I²C cost notes.
     ///
     /// # Errors
     ///
     /// `I2C::Error` when either the configuration read or the
     /// temperature read fails.
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the calls.)
-    ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::delay::NoopDelay;
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
     ///     Transaction::write_read(0x48, vec![0x00], vec![0x32, 0x00]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
     /// let mut delay = NoopDelay::new();
-    /// let temp = tmp.wait_for_temperature(&mut delay).unwrap();
+    /// let temp = tmp.wait_for_temperature(&mut delay).await.unwrap();
     /// assert!((temp - 50.0).abs() < 0.01);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
+    /// # });
     /// ```
     pub async fn wait_for_temperature<DELAY: AsyncDelayNs>(&mut self, delay: &mut DELAY) -> Result<f32, I2C::Error> {
         let config = self.read_configuration().await?;
-
-        let delay_time_us = match config.conversion_rate {
-            ConversionRate::_0_25Hz => 4_000_000,
-            ConversionRate::_1Hz => 1_000_000,
-            ConversionRate::_4Hz => 250_000,
-            ConversionRate::_16Hz => 62_500,
-        };
-
-        delay.delay_us(delay_time_us).await;
+        delay.delay_us(conversion_period_us(config.conversion_rate)).await;
         self.temperature().await
     }
 
@@ -1020,33 +1367,24 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x02], vec![0x19, 0x00]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
-    /// let limit = tmp.low_limit().unwrap();
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.low_limit().await.unwrap();
     /// assert!((limit - 25.0).abs() < 0.01);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
+    /// # });
     /// ```
     pub async fn low_limit(&mut self) -> Result<f32, I2C::Error> {
-        #[cfg(feature = "async")]
         let raw = self.inner.t_low().read_async().await?;
-
-        #[cfg(not(feature = "async"))]
-        let raw = self.inner.t_low().read()?;
         Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
@@ -1059,40 +1397,28 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///   12-bit fixed-point limit register).
     /// - `Error::Bus` when the I2C transaction fails.
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write(0x48, vec![0x02, 0x19, 0x00]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
-    /// tmp.set_low_limit(25.0).unwrap();
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_low_limit(25.0).await.unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
+    /// # });
     /// ```
     pub async fn set_low_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
         let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
-
-        #[cfg(feature = "async")]
         self.inner
             .t_low()
             .write_async(|r| *r = TLow::from(raw))
             .await
-            .map_err(Error::Bus)?;
-
-        #[cfg(not(feature = "async"))]
-        self.inner.t_low().write(|r| *r = TLow::from(raw)).map_err(Error::Bus)?;
-
-        Ok(())
+            .map_err(Error::Bus)
     }
 
     /// Read temperature high limit register
@@ -1101,33 +1427,24 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// `I2C::Error` when the I2C transaction fails
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write_read(0x48, vec![0x03], vec![0x50, 0x00]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
-    /// let limit = tmp.high_limit().unwrap();
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// let limit = tmp.high_limit().await.unwrap();
     /// assert!((limit - 80.0).abs() < 0.01);
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
+    /// # });
     /// ```
     pub async fn high_limit(&mut self) -> Result<f32, I2C::Error> {
-        #[cfg(feature = "async")]
         let raw = self.inner.t_high().read_async().await?;
-
-        #[cfg(not(feature = "async"))]
-        let raw = self.inner.t_high().read()?;
         Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
@@ -1140,83 +1457,99 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///   12-bit fixed-point limit register).
     /// - `Error::Bus` when the I2C transaction fails.
     ///
-    /// (Doctest runs against the blocking API; the async variant has the same
-    /// shape with `.await` after the call.)
-    ///
     /// # Examples
     ///
     /// ```
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// # #[cfg(feature = "async")] fn main() {}
-    /// # #[cfg(not(feature = "async"))]
-    /// # fn main() {
-    /// use tmp108::Tmp108;
+    /// use tmp108::AsyncTmp108;
     /// let i2c = Mock::new(&[
     ///     Transaction::write(0x48, vec![0x03, 0x50, 0x00]),
     /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
-    /// tmp.set_high_limit(80.0).unwrap();
+    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
+    /// tmp.set_high_limit(80.0).await.unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
-    /// # }
+    /// # });
     /// ```
     pub async fn set_high_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
         let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
-
-        #[cfg(feature = "async")]
         self.inner
             .t_high()
             .write_async(|r| *r = THigh::from(raw))
             .await
-            .map_err(Error::Bus)?;
-
-        #[cfg(not(feature = "async"))]
-        self.inner
-            .t_high()
-            .write(|r| *r = THigh::from(raw))
-            .map_err(Error::Bus)?;
-
-        Ok(())
+            .map_err(Error::Bus)
     }
 }
 
-#[maybe_async_cfg::maybe(
-    sync(
-        cfg(not(feature = "async")),
-        self = "Interface",
-        idents(AsyncI2c(sync = "I2c"), AsyncRegisterInterface(sync = "RegisterInterface"))
-    ),
-    async(feature = "async", keep_self)
-)]
-struct Interface<I2C: AsyncI2c> {
+/// Compute the chip's conversion period (1/CR) in microseconds.
+const fn conversion_period_us(rate: ConversionRate) -> u32 {
+    match rate {
+        ConversionRate::_0_25Hz => 4_000_000,
+        ConversionRate::_1Hz => 1_000_000,
+        ConversionRate::_4Hz => 250_000,
+        ConversionRate::_16Hz => 62_500,
+    }
+}
+
+/// Blocking-side I²C wire interface for [`Tmp108`].
+///
+/// Wraps an [`embedded_hal::i2c::I2c`] and the chip address; implements
+/// [`device_driver::RegisterInterface`] so the `device-driver` codegen
+/// can drive it.
+struct Interface<I2C: I2c> {
     i2c: I2C,
     addr: u8,
 }
 
-#[maybe_async_cfg::maybe(
-    sync(
-        cfg(not(feature = "async")),
-        self = "Interface",
-        idents(AsyncI2c(sync = "I2c"), AsyncRegisterInterface(sync = "RegisterInterface"))
-    ),
-    async(feature = "async", keep_self)
-)]
-impl<I2C: AsyncI2c> Interface<I2C> {
-    /// Create a new Interface instance.
+impl<I2C: I2c> Interface<I2C> {
     fn new(i2c: I2C, a0: A0) -> Self {
         Self { i2c, addr: a0.into() }
     }
 }
 
-#[maybe_async_cfg::maybe(
-    sync(
-        cfg(not(feature = "async")),
-        self = "Interface",
-        idents(AsyncI2c(sync = "I2c"), AsyncRegisterInterface(sync = "RegisterInterface"))
-    ),
-    async(feature = "async", keep_self)
-)]
-impl<I2C: AsyncI2c> AsyncRegisterInterface for Interface<I2C> {
+impl<I2C: I2c> RegisterInterface for Interface<I2C> {
+    type Error = I2C::Error;
+    type AddressType = u8;
+
+    fn write_register(&mut self, address: Self::AddressType, _size_bits: u32, data: &[u8]) -> Result<(), Self::Error> {
+        debug_assert_eq!(data.len(), 2, "TMP108 registers are 16-bit");
+        let mut buf = [0; 3];
+        buf[0] = address;
+        buf[1..].copy_from_slice(data);
+        self.i2c.write(self.addr, &buf)
+    }
+
+    fn read_register(
+        &mut self,
+        address: Self::AddressType,
+        _size_bits: u32,
+        data: &mut [u8],
+    ) -> Result<(), Self::Error> {
+        self.i2c.write_read(self.addr, &[address], data)
+    }
+}
+
+/// Async-side I²C wire interface for [`AsyncTmp108`].
+///
+/// Wraps an [`embedded_hal_async::i2c::I2c`] and the chip address;
+/// implements [`device_driver::AsyncRegisterInterface`] so the
+/// `device-driver` codegen can drive it asynchronously.
+#[cfg(feature = "async")]
+struct AsyncInterface<I2C: AsyncI2c> {
+    i2c: I2C,
+    addr: u8,
+}
+
+#[cfg(feature = "async")]
+impl<I2C: AsyncI2c> AsyncInterface<I2C> {
+    fn new(i2c: I2C, a0: A0) -> Self {
+        Self { i2c, addr: a0.into() }
+    }
+}
+
+#[cfg(feature = "async")]
+impl<I2C: AsyncI2c> AsyncRegisterInterface for AsyncInterface<I2C> {
     type Error = I2C::Error;
     type AddressType = u8;
 
@@ -1226,11 +1559,10 @@ impl<I2C: AsyncI2c> AsyncRegisterInterface for Interface<I2C> {
         _size_bits: u32,
         data: &[u8],
     ) -> Result<(), Self::Error> {
+        debug_assert_eq!(data.len(), 2, "TMP108 registers are 16-bit");
         let mut buf = [0; 3];
-
         buf[0] = address;
         buf[1..].copy_from_slice(data);
-
         self.i2c.write(self.addr, &buf).await
     }
 
@@ -1292,12 +1624,14 @@ impl<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Error> embedde
 }
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
-impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::sensor::ErrorType for Tmp108<I2C> {
+impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::sensor::ErrorType for AsyncTmp108<I2C> {
     type Error = Error<I2C::Error>;
 }
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
-impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature::TemperatureSensor for Tmp108<I2C> {
+impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature::TemperatureSensor
+    for AsyncTmp108<I2C>
+{
     async fn temperature(&mut self) -> Result<embedded_sensors_hal_async::temperature::DegreesCelsius, Self::Error> {
         self.temperature().await.map_err(Error::Bus)
     }
@@ -1321,7 +1655,7 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
 impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature::TemperatureThresholdSet
-    for Tmp108<I2C>
+    for AsyncTmp108<I2C>
 {
     async fn set_temperature_threshold_low(
         &mut self,
@@ -1346,7 +1680,7 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        // Bare-Tmp108 set_*_limit returns Error<I2C::Error>; widen the Pin
+        // Bare-AsyncTmp108 set_*_limit returns Error<I2C::Error>; widen the Pin
         // type parameter to the AlertTmp108-flavored Error.
         self.tmp108.set_low_limit(threshold).await.map_err(widen_pin_err)
     }
@@ -1405,7 +1739,9 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
 }
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
-impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature::TemperatureHysteresis for Tmp108<I2C> {
+impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature::TemperatureHysteresis
+    for AsyncTmp108<I2C>
+{
     async fn set_temperature_threshold_hysteresis(
         &mut self,
         hysteresis: embedded_sensors_hal_async::temperature::DegreesCelsius,
@@ -1440,7 +1776,8 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
 
 /// Widen an `Error<E>` (with Pin = Infallible) to `Error<E, P>` for any
 /// `P`. Used by the `AlertTmp108` trait impls that delegate to bare
-/// `Tmp108` methods (which cannot themselves produce a `Pin` error).
+/// [`AsyncTmp108`] methods (which cannot themselves produce a `Pin`
+/// error).
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
 fn widen_pin_err<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Error>(
     e: Error<E, core::convert::Infallible>,
@@ -1917,25 +2254,25 @@ mod tests {
             let expectations = vec![];
 
             let mock = Mock::new(&expectations);
-            let tmp = Tmp108::new_with_a0_gnd(mock);
+            let tmp = AsyncTmp108::new_with_a0_gnd(mock);
             assert_eq!(tmp.addr(), 0x48);
             let mut mock = tmp.destroy();
             mock.done();
 
             let mock = Mock::new(&expectations);
-            let tmp = Tmp108::new_with_a0_vplus(mock);
+            let tmp = AsyncTmp108::new_with_a0_vplus(mock);
             assert_eq!(tmp.addr(), 0x49);
             let mut mock = tmp.destroy();
             mock.done();
 
             let mock = Mock::new(&expectations);
-            let tmp = Tmp108::new_with_a0_sda(mock);
+            let tmp = AsyncTmp108::new_with_a0_sda(mock);
             assert_eq!(tmp.addr(), 0x4a);
             let mut mock = tmp.destroy();
             mock.done();
 
             let mock = Mock::new(&expectations);
-            let tmp = Tmp108::new_with_a0_scl(mock);
+            let tmp = AsyncTmp108::new_with_a0_scl(mock);
             assert_eq!(tmp.addr(), 0x4b);
             let mut mock = tmp.destroy();
             mock.done();
@@ -1951,7 +2288,7 @@ mod tests {
             ];
 
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
             let result = tmp108.read_configuration().await;
             assert!(result.is_ok());
 
@@ -1997,7 +2334,7 @@ mod tests {
 
             for (e, t) in expectations.iter().zip(temps.iter()) {
                 let mock = Mock::new(e);
-                let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+                let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
                 let result = tmp108.temperature().await;
                 assert!(result.is_ok());
 
@@ -2038,7 +2375,7 @@ mod tests {
             let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
 
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             for t in &temps {
                 let result = tmp108.set_high_limit(*t).await;
@@ -2084,7 +2421,7 @@ mod tests {
             let temps = [127.9375, 100.0, 80.0, 75.0, 50.0, 25.0, 0.25, 0.0, -0.25, -25.0, -55.0];
 
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             for t in &temps {
                 let result = tmp108.set_low_limit(*t).await;
@@ -2106,7 +2443,7 @@ mod tests {
             // No I2C transactions are expected; out-of-range / non-finite
             // inputs must be rejected before any bus traffic.
             let mock = Mock::new(&[]);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             // Values just outside the representable [-128.0, 127.9375] range.
             for bad in [128.0_f32, 127.940_f32, -128.001_f32, -200.0_f32, 200.0_f32] {
@@ -2128,7 +2465,7 @@ mod tests {
         async fn probe_returns_true_for_por_value() {
             let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10])];
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             assert_eq!(tmp108.probe().await, Ok(true));
 
@@ -2140,7 +2477,7 @@ mod tests {
         async fn probe_returns_false_for_non_por_value() {
             let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0])];
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             assert_eq!(tmp108.probe().await, Ok(false));
 
@@ -2167,7 +2504,7 @@ mod tests {
                 Transaction::write(0x48, vec![0x01, 0x20, 0x10]),
             ];
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             let result = tmp108
                 .continuous(async |t| {
@@ -2204,7 +2541,7 @@ mod tests {
                 Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]).with_error(shutdown_err),
             ];
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             let result = tmp108
                 .continuous(async |t| {
@@ -2321,7 +2658,7 @@ mod tests {
             }
 
             let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             for (input, _) in cases {
                 let r = tmp108.set_temperature_threshold_hysteresis(*input).await;
@@ -2340,7 +2677,7 @@ mod tests {
             // No I2C transactions expected; out-of-tolerance and non-finite
             // inputs must be rejected before any bus traffic.
             let mock = Mock::new(&[]);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
 
             for bad in [-0.5_f32, 0.5_f32, 3.0_f32, 5.0_f32, -1.0_f32, 10.0_f32] {
                 let r = tmp108.set_temperature_threshold_hysteresis(bad).await;

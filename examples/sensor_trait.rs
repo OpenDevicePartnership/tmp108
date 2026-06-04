@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     use anyhow::anyhow;
     use embedded_sensors_hal_async::temperature::{DegreesCelsius, TemperatureSensor};
     use pico_de_gallo_hal::Hal;
-    use tmp108::Tmp108;
+    use tmp108::AsyncTmp108;
 
     async fn read_any_sensor<S: TemperatureSensor>(sensor: &mut S) -> Result<DegreesCelsius, S::Error> {
         sensor.temperature().await
@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
 
     let hal = Hal::new();
     let i2c = hal.i2c();
-    let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
 
     let temperature = read_any_sensor(&mut tmp).await.map_err(|_| anyhow!("read failed"))?;
     println!("Temperature (via trait): {temperature:.2} C");
