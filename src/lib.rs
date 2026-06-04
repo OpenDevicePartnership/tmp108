@@ -108,6 +108,127 @@ impl Default for Config {
     }
 }
 
+/// Pure-function register codec.
+///
+/// All sync/async-agnostic chip logic lives here: scaling between °C
+/// and the chip's raw 12-bit fixed-point register encoding, validation
+/// of caller-supplied limits, snapping of continuous-f32 hysteresis
+/// values to the four discrete chip settings, and the conversion
+/// between the typed [`Config`] and the generated `Configuration`
+/// field-set.
+///
+/// The blocking and async drivers both delegate to this module so the
+/// meaningful work lives in exactly one place; the per-driver methods
+/// are thin shells that perform I²C and call into `ops`.
+pub(crate) mod ops {
+    use crate::Config;
+    #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+    use crate::Hysteresis;
+    use crate::inner::field_sets::Configuration;
+
+    /// Temperature register LSB, in °C, per the TMP108 datasheet.
+    pub(crate) const CELSIUS_PER_BIT: f32 = 0.0625;
+
+    /// Documented power-on reset value of the configuration register.
+    /// Used by [`crate::Tmp108::probe`] to verify chip presence.
+    pub(crate) const POR_CONFIG: u16 = 0x1022;
+
+    /// Minimum representable limit-register value, in °C
+    /// (12-bit signed left-aligned at the 0.0625 °C LSB).
+    pub(crate) const LIMIT_MIN_CELSIUS: f32 = -128.0;
+
+    /// Maximum representable limit-register value, in °C.
+    pub(crate) const LIMIT_MAX_CELSIUS: f32 = 127.937_5;
+
+    /// Tolerance band for snapping continuous-f32 hysteresis input
+    /// to the four discrete chip settings, in °C.
+    #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+    pub(crate) const HYSTERESIS_TOLERANCE: f32 = 0.05;
+
+    /// Convert a raw 16-bit signed temperature/limit register value
+    /// to °C.
+    ///
+    /// Per the datasheet the temperature and limit registers are
+    /// left-aligned 12-bit signed values: the LSB is the bit at
+    /// position 4 (0.0625 °C/LSB) and bits 3..0 are reserved=0.
+    /// Computed as a single multiplication by `CELSIUS_PER_BIT/16`
+    /// (== `1/256` = `0.003_906_25`, exactly representable in `f32`)
+    /// rather than dividing by 16 first via integer division — the
+    /// latter is asymmetric for negative inputs with non-zero low
+    /// bits.
+    pub(crate) fn to_celsius(t: i16) -> f32 {
+        f32::from(t) * (CELSIUS_PER_BIT / 16.0)
+    }
+
+    /// Convert a temperature in degrees Celsius to the raw 12-bit
+    /// signed fixed-point representation used by the chip's `TLow` /
+    /// `THigh` registers.
+    ///
+    /// Returns `None` for inputs that are NaN, ±∞, or outside the
+    /// representable range `[-128.0, 127.9375] °C`.
+    pub(crate) fn to_raw(t: f32) -> Option<i16> {
+        if !t.is_finite() || !(LIMIT_MIN_CELSIUS..=LIMIT_MAX_CELSIUS).contains(&t) {
+            return None;
+        }
+
+        // Range-checked above; this cast cannot truncate.
+        #[allow(clippy::cast_possible_truncation)]
+        Some((t * 16.0 / CELSIUS_PER_BIT) as i16)
+    }
+
+    /// Snap a continuous-f32 hysteresis input to the nearest legal
+    /// chip setting within the [`HYSTERESIS_TOLERANCE`] band.
+    ///
+    /// Returns `None` for inputs that are non-finite or further than
+    /// the tolerance from every legal setting. The four legal
+    /// settings are 0, 1, 2, and 4 °C.
+    #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+    pub(crate) fn snap_hysteresis(input: f32) -> Option<Hysteresis> {
+        const HYS_VALUES: &[(f32, Hysteresis)] = &[
+            (0.0, Hysteresis::_0C),
+            (1.0, Hysteresis::_1C),
+            (2.0, Hysteresis::_2C),
+            (4.0, Hysteresis::_4C),
+        ];
+
+        if !input.is_finite() {
+            return None;
+        }
+
+        // HYS_VALUES is non-empty so min_by always returns Some.
+        let (closest, snapped) = HYS_VALUES
+            .iter()
+            .copied()
+            .min_by(|(a, _), (b, _)| (input - a).abs().total_cmp(&(input - b).abs()))
+            .expect("HYS_VALUES is non-empty");
+
+        if (input - closest).abs() > HYSTERESIS_TOLERANCE {
+            return None;
+        }
+
+        Some(snapped)
+    }
+
+    /// Decode a configuration-register snapshot into a typed [`Config`].
+    pub(crate) fn decode_config(c: Configuration) -> Config {
+        Config {
+            thermostat_mode: c.tm(),
+            alert_polarity: c.pol(),
+            conversion_rate: c.cr(),
+            hysteresis: c.hys(),
+        }
+    }
+
+    /// Apply a typed [`Config`] to a configuration-register snapshot,
+    /// preserving untouched bits (M, FL, FH, ID).
+    pub(crate) fn apply_config(r: &mut Configuration, cfg: Config) {
+        r.set_tm(cfg.thermostat_mode);
+        r.set_pol(cfg.alert_polarity);
+        r.set_cr(cfg.conversion_rate);
+        r.set_hys(cfg.hysteresis);
+    }
+}
+
 /// Tmp108 device driver.
 #[maybe_async_cfg::maybe(
     sync(cfg(not(feature = "async")), self = "Tmp108", idents(AsyncI2c(sync = "I2c"))),
@@ -484,8 +605,6 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
     async(feature = "async", keep_self)
 )]
 impl<I2C: AsyncI2c> Tmp108<I2C> {
-    const CELSIUS_PER_BIT: f32 = 0.0625;
-
     /// Probe the chip's presence by reading the configuration register.
     ///
     /// The TMP108 does not expose a `WHO_AM_I` / device-ID register, so a
@@ -536,16 +655,13 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # }
     /// ```
     pub async fn probe(&mut self) -> Result<bool, I2C::Error> {
-        /// TMP108 configuration register reset value, per the datasheet.
-        const POR: u16 = 0x1022;
-
         #[cfg(feature = "async")]
         let raw = self.inner.configuration().read_async().await?;
 
         #[cfg(not(feature = "async"))]
         let raw = self.inner.configuration().read()?;
 
-        Ok(u16::from_le_bytes(raw.into()) == POR)
+        Ok(u16::from_le_bytes(raw.into()) == ops::POR_CONFIG)
     }
 
     /// Read configuration register
@@ -582,12 +698,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         #[cfg(not(feature = "async"))]
         let c = self.inner.configuration().read()?;
 
-        Ok(Config {
-            thermostat_mode: c.tm(),
-            alert_polarity: c.pol(),
-            conversion_rate: c.cr(),
-            hysteresis: c.hys(),
-        })
+        Ok(ops::decode_config(c))
     }
 
     /// Configure device parameters.
@@ -627,21 +738,11 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         let res = self
             .inner
             .configuration()
-            .modify_async(|r| {
-                r.set_tm(config.thermostat_mode);
-                r.set_pol(config.alert_polarity);
-                r.set_cr(config.conversion_rate);
-                r.set_hys(config.hysteresis);
-            })
+            .modify_async(|r| ops::apply_config(r, config))
             .await;
 
         #[cfg(not(feature = "async"))]
-        let res = self.inner.configuration().modify(|r| {
-            r.set_tm(config.thermostat_mode);
-            r.set_pol(config.alert_polarity);
-            r.set_cr(config.conversion_rate);
-            r.set_hys(config.hysteresis);
-        });
+        let res = self.inner.configuration().modify(|r| ops::apply_config(r, config));
 
         res
     }
@@ -681,7 +782,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         let res = self.inner.temperature().read();
 
         let raw = res?;
-        Ok(Self::to_celsius(i16::from_be_bytes(raw.into())))
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
     /// Configure device for one-shot conversion
@@ -946,7 +1047,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
 
         #[cfg(not(feature = "async"))]
         let raw = self.inner.t_low().read()?;
-        Ok(Self::to_celsius(i16::from_be_bytes(raw.into())))
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
     /// Set temperature low limit register
@@ -979,7 +1080,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # }
     /// ```
     pub async fn set_low_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
-        let raw = Self::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
+        let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
 
         #[cfg(feature = "async")]
         self.inner
@@ -1027,7 +1128,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
 
         #[cfg(not(feature = "async"))]
         let raw = self.inner.t_high().read()?;
-        Ok(Self::to_celsius(i16::from_be_bytes(raw.into())))
+        Ok(ops::to_celsius(i16::from_be_bytes(raw.into())))
     }
 
     /// Set temperature high limit register
@@ -1060,7 +1161,7 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # }
     /// ```
     pub async fn set_high_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
-        let raw = Self::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
+        let raw = ops::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
 
         #[cfg(feature = "async")]
         self.inner
@@ -1076,41 +1177,6 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
             .map_err(Error::Bus)?;
 
         Ok(())
-    }
-
-    fn to_celsius(t: i16) -> f32 {
-        // Per the datasheet the temperature and limit registers are
-        // left-aligned 12-bit signed values: the LSB is the bit at
-        // position 4 (0.0625 °C/LSB) and bits 3..0 are reserved=0.
-        // Compute the conversion as a single multiplication by
-        // CELSIUS_PER_BIT/16 (== 1/256 = 0.003_906_25, exactly
-        // representable in f32) instead of dividing by 16 first via
-        // integer division.
-        //
-        // For datasheet-conforming inputs (bits 3..0 == 0) this returns
-        // exactly the same f32 as before. For any non-zero low bits it
-        // returns the correct value instead of truncating toward zero
-        // (which was asymmetric for negative inputs).
-        f32::from(t) * (Self::CELSIUS_PER_BIT / 16.0)
-    }
-
-    /// Convert a temperature in degrees Celsius to the raw 12-bit signed
-    /// fixed-point representation used by the chip's TLow/THigh registers.
-    ///
-    /// Returns `None` for inputs that are NaN, ±∞, or outside the
-    /// representable range `[-128.0, 127.9375] °C`.
-    fn to_raw(t: f32) -> Option<i16> {
-        // i16 representable range divided by the 16x scale factor.
-        const MIN: f32 = -128.0;
-        const MAX: f32 = 127.937_5;
-
-        if !t.is_finite() || !(MIN..=MAX).contains(&t) {
-            return None;
-        }
-
-        // Range-checked above; this cast cannot truncate.
-        #[allow(clippy::cast_possible_truncation)]
-        Some((t * 16.0 / Self::CELSIUS_PER_BIT) as i16)
     }
 }
 
@@ -1346,35 +1412,10 @@ impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature:
     ) -> Result<(), Self::Error> {
         // The trait method takes a continuous range of f32 °C values, but
         // the chip only supports four discrete hysteresis settings:
-        // 0, 1, 2, and 4 °C. Snap the input to the nearest legal value
-        // within a tolerance band of 0.05 °C; reject anything outside the
-        // band (and any non-finite input) with `Error::InvalidInput`.
-        //
-        // The tolerance is generous enough to absorb ordinary float
-        // arithmetic (e.g. 0.1 + 0.9 rounding away from 1.0) while still
-        // surfacing genuinely unsupported requests like 3.0 °C.
-        const HYS_VALUES: &[(f32, Hysteresis)] = &[
-            (0.0, Hysteresis::_0C),
-            (1.0, Hysteresis::_1C),
-            (2.0, Hysteresis::_2C),
-            (4.0, Hysteresis::_4C),
-        ];
-        const HYS_TOLERANCE: f32 = 0.05;
-
-        if !hysteresis.is_finite() {
-            return Err(Error::InvalidInput);
-        }
-
-        // HYS_VALUES is non-empty so min_by always returns Some.
-        let (closest, snapped) = HYS_VALUES
-            .iter()
-            .copied()
-            .min_by(|(a, _), (b, _)| (hysteresis - a).abs().total_cmp(&(hysteresis - b).abs()))
-            .expect("HYS_VALUES is non-empty");
-
-        if (hysteresis - closest).abs() > HYS_TOLERANCE {
-            return Err(Error::InvalidInput);
-        }
+        // 0, 1, 2, and 4 °C. ops::snap_hysteresis snaps within a 0.05 °C
+        // tolerance band; anything outside the band (or non-finite) is
+        // rejected with `Error::InvalidInput`.
+        let snapped = ops::snap_hysteresis(hysteresis).ok_or(Error::InvalidInput)?;
 
         let mut config = self.read_configuration().await.map_err(Error::Bus)?;
         config.hysteresis = snapped;
@@ -1489,6 +1530,118 @@ mod tests {
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1022);
         cfg.set_pol(Polarity::ActiveHigh);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x9022);
+    }
+
+    mod ops_tests {
+        use assert_approx_eq::assert_approx_eq;
+
+        use super::*;
+
+        #[test]
+        fn to_celsius_legal_and_low_bits() {
+            // Datasheet-conforming inputs (bits 3..0 == 0).
+            let legal: &[(i16, f32)] = &[
+                (0x0000, 0.0),
+                (0x0010, 0.0625),
+                (0xFFF0_u16.cast_signed(), -0.0625),
+                (0x7FF0, 127.9375),
+                (0xC900_u16.cast_signed(), -55.0),
+            ];
+            for (raw, expected) in legal {
+                assert_approx_eq!(ops::to_celsius(*raw), *expected, 1e-5);
+            }
+
+            // Non-zero low bits: symmetric resolution (no integer-division
+            // truncation toward zero).
+            let symmetric: &[(i16, f32)] = &[(0x0001, 0.003_906_25), (0xFFFF_u16.cast_signed(), -0.003_906_25)];
+            for (raw, expected) in symmetric {
+                assert_approx_eq!(ops::to_celsius(*raw), *expected, 1e-5);
+            }
+        }
+
+        #[test]
+        fn to_raw_round_trips_legal_inputs() {
+            for celsius in [127.9375_f32, 80.0, 0.25, 0.0, -0.25, -55.0, -128.0] {
+                let raw = ops::to_raw(celsius).expect("legal input should encode");
+                assert_approx_eq!(ops::to_celsius(raw), celsius, 1e-4);
+            }
+        }
+
+        #[test]
+        fn to_raw_rejects_out_of_range_and_non_finite() {
+            for bad in [128.0_f32, 127.94, -128.001, 200.0, -200.0] {
+                assert_eq!(ops::to_raw(bad), None, "input {bad} should be rejected");
+            }
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                assert_eq!(ops::to_raw(bad), None, "input {bad} should be rejected");
+            }
+        }
+
+        #[test]
+        fn to_raw_accepts_range_boundary() {
+            assert_eq!(ops::to_raw(-128.0), Some(-32768));
+            assert_eq!(ops::to_raw(127.9375), Some(32752));
+        }
+
+        #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+        #[test]
+        fn snap_hysteresis_accepts_within_tolerance() {
+            let cases: &[(f32, Hysteresis)] = &[
+                (0.0, Hysteresis::_0C),
+                (1.0, Hysteresis::_1C),
+                (2.0, Hysteresis::_2C),
+                (4.0, Hysteresis::_4C),
+                (0.04, Hysteresis::_0C),
+                (0.1_f32 + 0.9_f32, Hysteresis::_1C),
+                (1.95, Hysteresis::_2C),
+                (3.97, Hysteresis::_4C),
+            ];
+            for (input, expected) in cases {
+                assert_eq!(
+                    ops::snap_hysteresis(*input),
+                    Some(*expected),
+                    "input {input} should snap to {expected:?}"
+                );
+            }
+        }
+
+        #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+        #[test]
+        fn snap_hysteresis_rejects_out_of_tolerance_and_non_finite() {
+            for bad in [-0.5_f32, 0.5, 3.0, 5.0, -1.0, 10.0] {
+                assert_eq!(ops::snap_hysteresis(bad), None);
+            }
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                assert_eq!(ops::snap_hysteresis(bad), None);
+            }
+        }
+
+        #[test]
+        fn decode_apply_config_roundtrip() {
+            // For every non-default Config we set, applying it to the POR
+            // configuration and reading it back must yield the same Config
+            // (modulo bits we don't expose: M, FL, FH, ID).
+            let cfg = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveHigh,
+                conversion_rate: ConversionRate::_16Hz,
+                hysteresis: Hysteresis::_4C,
+            };
+
+            let mut reg = Configuration::new();
+            ops::apply_config(&mut reg, cfg);
+            assert_eq!(ops::decode_config(reg), cfg);
+        }
+
+        #[test]
+        fn por_config_matches_default_configuration() {
+            // ops::POR_CONFIG must match the chip's documented POR value
+            // (0x1022) and the generated Configuration field-set's
+            // default. If the device-driver TOML changes the reset value,
+            // probe()'s contract changes too — this test pins it.
+            let cfg = Configuration::new();
+            assert_eq!(u16::from_le_bytes(cfg.into()), ops::POR_CONFIG);
+        }
     }
 
     #[cfg(not(feature = "async"))]
@@ -1707,33 +1860,6 @@ mod tests {
 
             let mut mock = tmp108.destroy();
             mock.done();
-        }
-
-        #[test]
-        fn to_celsius_is_symmetric_around_zero() {
-            // For datasheet-conforming inputs (bits 3..0 == 0) the
-            // conversion is identical to the previous integer-division
-            // implementation. For inputs with non-zero low bits the new
-            // implementation no longer truncates toward zero, which was
-            // asymmetric for negative values.
-            //
-            // 0xFFFF as i16 = -1. Old code: f32::from(-1 / 16) * 0.0625 =
-            // f32::from(0) * 0.0625 = 0.0. New code: f32::from(-1) *
-            // (0.0625 / 16.0) = -0.003_906_25.
-            let cases: &[(i16, f32)] = &[
-                (0x0000, 0.0),
-                (0x0010, 0.0625),
-                (0xFFF0_u16 as i16, -0.0625),
-                (0x7FF0, 127.9375),
-                (0xC900_u16 as i16, -55.0),
-                // Non-zero low bits: symmetric resolution.
-                (0x0001, 0.003_906_25),
-                (0xFFFF_u16 as i16, -0.003_906_25),
-            ];
-            for (raw, expected) in cases {
-                let got = Tmp108::<Mock>::to_celsius(*raw);
-                assert_approx_eq!(got, *expected, 1e-5);
-            }
         }
 
         #[test]
