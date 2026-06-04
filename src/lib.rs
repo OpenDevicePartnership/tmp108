@@ -424,6 +424,68 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
 impl<I2C: AsyncI2c> Tmp108<I2C> {
     const CELSIUS_PER_BIT: f32 = 0.0625;
 
+    /// Probe the chip's presence by reading the configuration register.
+    ///
+    /// The TMP108 does not expose a `WHO_AM_I` / device-ID register, so a
+    /// true identity probe is impossible. This method does the next-best
+    /// thing: it reads the configuration register and reports whether
+    /// the value matches the chip's documented power-on reset (POR)
+    /// value `0x1022`. Useful immediately after power-on to confirm the
+    /// chip is freshly out of reset and on the bus.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(true)` — the read succeeded and the configuration register
+    ///   matches the POR value. Strong evidence the chip is present and
+    ///   has not yet been reconfigured.
+    /// - `Ok(false)` — the read succeeded but the configuration differs
+    ///   from POR. Still strong evidence the chip is present (it `ACKed`
+    ///   and returned plausible register data) but it was already
+    ///   reconfigured since power-on. False negatives are unavoidable on
+    ///   any boot path where the chip was configured before this method
+    ///   ran.
+    /// - `Err(_)` — the I2C read failed. Most likely cause is that no
+    ///   chip is present at the expected address (NACK), but any bus
+    ///   error reports here as well.
+    ///
+    /// # Errors
+    ///
+    /// `I2C::Error` when the I2C read fails.
+    ///
+    /// (Doctest runs against the blocking API; the async variant has the same
+    /// shape with `.await` after the call.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
+    /// # #[cfg(feature = "async")] fn main() {}
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn main() {
+    /// use tmp108::Tmp108;
+    /// // Chip returns the POR configuration -> probe() reports true.
+    /// let i2c = Mock::new(&[
+    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+    /// ]);
+    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+    /// assert!(tmp.probe().unwrap());
+    /// # let mut i2c = tmp.destroy();
+    /// # i2c.done();
+    /// # }
+    /// ```
+    pub async fn probe(&mut self) -> Result<bool, I2C::Error> {
+        /// TMP108 configuration register reset value, per the datasheet.
+        const POR: u16 = 0x1022;
+
+        #[cfg(feature = "async")]
+        let raw = self.inner.configuration().read_async().await?;
+
+        #[cfg(not(feature = "async"))]
+        let raw = self.inner.configuration().read()?;
+
+        Ok(u16::from_le_bytes(raw.into()) == POR)
+    }
+
     /// Read configuration register
     ///
     /// # Errors
@@ -1584,6 +1646,48 @@ mod tests {
                 assert_approx_eq!(got, *expected, 1e-5);
             }
         }
+
+        #[test]
+        fn probe_returns_true_for_por_value() {
+            // Configuration register at 0x01 returns the POR value 0x1022.
+            // The register layout is little-endian per tmp108.toml so the
+            // wire bytes are [0x22, 0x10].
+            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10])];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            assert_eq!(tmp108.probe(), Ok(true));
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[test]
+        fn probe_returns_false_for_non_por_value() {
+            // Chip is present (ACKs) but has been reconfigured.
+            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0])];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            assert_eq!(tmp108.probe(), Ok(false));
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[test]
+        fn probe_propagates_bus_error() {
+            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]).with_error(
+                embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
+            )];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            assert!(tmp108.probe().is_err());
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
     }
 
     #[cfg(feature = "async")]
@@ -1800,6 +1904,30 @@ mod tests {
                 assert!(matches!(tmp108.set_low_limit(bad).await, Err(Error::InvalidInput)));
                 assert!(matches!(tmp108.set_high_limit(bad).await, Err(Error::InvalidInput)));
             }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn probe_returns_true_for_por_value() {
+            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10])];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            assert_eq!(tmp108.probe().await, Ok(true));
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn probe_returns_false_for_non_por_value() {
+            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0])];
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            assert_eq!(tmp108.probe().await, Ok(false));
 
             let mut mock = tmp108.destroy();
             mock.done();
