@@ -88,7 +88,7 @@ impl From<A0> for u8 {
 }
 
 /// Tmp108 configuration parameters
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Config {
     /// Thermostat mode.
     pub thermostat_mode: Thermostat,
@@ -1664,6 +1664,11 @@ impl<I2C: AsyncI2c> AsyncRegisterInterface for AsyncInterface<I2C> {
 /// error. [`AlertTmp108`] specializes to
 /// `Error<I2C::Error, ALERT::Error>` and uses the [`Pin`][Self::Pin]
 /// variant when the GPIO peripheral fails.
+///
+/// `Error` implements [`Clone`], [`Copy`], [`PartialEq`], and [`Eq`]
+/// when both `E` and `P` do. [`Debug`] is always available because
+/// `embedded_hal::i2c::Error` and `embedded_hal::digital::Error` both
+/// require it.
 #[derive(Debug)]
 pub enum Error<E: embedded_hal::i2c::Error, P: embedded_hal::digital::Error = core::convert::Infallible> {
     /// I2C bus error.
@@ -1673,6 +1678,38 @@ pub enum Error<E: embedded_hal::i2c::Error, P: embedded_hal::digital::Error = co
     /// ALERT pin GPIO error.
     Pin(P),
 }
+
+// Manual Clone (rather than #[derive]) because the auto-derive would
+// emit `where E: Clone, P: Clone, E: embedded_hal::i2c::Error,
+// P: embedded_hal::digital::Error` and we want only the first two
+// bounds — the trait bounds are already implied by the struct.
+// `expl_impl_clone_on_copy` would prefer #[derive], but doing so would
+// require the same fix and the manual form is clearer about the bounds.
+#[allow(clippy::expl_impl_clone_on_copy)]
+impl<E: embedded_hal::i2c::Error + Clone, P: embedded_hal::digital::Error + Clone> Clone for Error<E, P> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Bus(e) => Self::Bus(e.clone()),
+            Self::InvalidInput => Self::InvalidInput,
+            Self::Pin(e) => Self::Pin(e.clone()),
+        }
+    }
+}
+
+impl<E: embedded_hal::i2c::Error + Copy, P: embedded_hal::digital::Error + Copy> Copy for Error<E, P> {}
+
+impl<E: embedded_hal::i2c::Error + PartialEq, P: embedded_hal::digital::Error + PartialEq> PartialEq for Error<E, P> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bus(a), Self::Bus(b)) => a == b,
+            (Self::InvalidInput, Self::InvalidInput) => true,
+            (Self::Pin(a), Self::Pin(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl<E: embedded_hal::i2c::Error + Eq, P: embedded_hal::digital::Error + Eq> Eq for Error<E, P> {}
 
 #[cfg(all(feature = "embedded-sensors-hal", not(feature = "async")))]
 impl<E: embedded_hal::i2c::Error, P: embedded_hal::digital::Error> embedded_sensors_hal::sensor::Error for Error<E, P> {
@@ -2057,6 +2094,44 @@ mod tests {
             // probe()'s contract changes too — this test pins it.
             let cfg = Configuration::new();
             assert_eq!(u16::from_le_bytes(cfg.into()), ops::POR_CONFIG);
+        }
+
+        #[test]
+        fn config_derives_eq() {
+            fn assert_eq_trait<T: Eq>(_: &T) {}
+
+            // Config is now `Eq` (and `PartialEq` and `Hash`); use the
+            // stronger trait so we know it actually compiles.
+            let a = Config::default();
+            let b = Config::default();
+            assert_eq_trait(&a);
+            assert_eq!(a, b);
+        }
+
+        #[test]
+        fn error_derives_with_eq_kind() {
+            // Error<E, P> implements Clone/Copy/PartialEq/Eq when both
+            // E and P do. Verify with concrete types that satisfy those
+            // bounds (ErrorKind from embedded-hal is the canonical
+            // small witness here).
+            type EK = embedded_hal::i2c::ErrorKind;
+            type PK = embedded_hal::digital::ErrorKind;
+
+            fn assert_traits<T: Clone + Copy + PartialEq + Eq + core::fmt::Debug>(_: &T) {}
+
+            let invalid_a: Error<EK, PK> = Error::InvalidInput;
+            let invalid_b: Error<EK, PK> = Error::InvalidInput;
+            assert_traits(&invalid_a);
+            assert_eq!(invalid_a, invalid_b);
+            let invalid_c = invalid_a; // Copy
+
+            assert_eq!(invalid_a, invalid_c);
+            assert_eq!(invalid_a.clone(), invalid_b);
+
+            let bus_err: Error<EK, PK> = Error::Bus(EK::Other);
+            let pin_err: Error<EK, PK> = Error::Pin(PK::Other);
+            assert_ne!(bus_err, pin_err);
+            assert_ne!(bus_err, invalid_a);
         }
     }
 
