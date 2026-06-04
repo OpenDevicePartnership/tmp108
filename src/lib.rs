@@ -7,6 +7,33 @@
 //! to the official [`Datasheet`].
 //!
 //! [`Datasheet`]: https://www.ti.com/lit/gpn/tmp108
+//!
+//! # Operational notes
+//!
+//! ## I²C bus ownership
+//!
+//! The driver assumes single-master ownership of the TMP108. Several
+//! methods (notably [`Tmp108::configure`], [`Tmp108::one_shot`], and
+//! [`Tmp108::shutdown`]) perform a read-modify-write on the
+//! configuration register as two distinct I²C transactions. On a
+//! multi-master bus, a second master writing to register `0x01`
+//! between the read and the write will silently lose those writes —
+//! the TMP108 has no register-level lock. In multi-master designs,
+//! serialise driver access at a higher level (e.g. a bus mutex around
+//! the entire driver, not just individual I²C transactions).
+//!
+//! ## Driver lifecycle on drop
+//!
+//! Dropping a [`Tmp108`] or [`AlertTmp108`] does **not** change the
+//! chip's operating mode. The chip retains whatever `M` bits were last
+//! written. If you want the chip to stop drawing current after the
+//! driver goes out of scope, call [`Tmp108::shutdown`] (or finish a
+//! [`Tmp108::continuous`] call cleanly) before dropping.
+//!
+//! In particular, dropping the future returned by
+//! [`Tmp108::continuous`] mid-flight (e.g. via `embassy_futures::select!`
+//! or `tokio::time::timeout`) leaves the chip in `Mode::Continuous`
+//! indefinitely. See the cancel-safety note on that method.
 
 #![doc(html_root_url = "https://docs.rs/tmp108/latest")]
 #![doc = include_str!("../README.md")]
@@ -261,7 +288,42 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     }
 }
 
-/// Tmp108 asynchronous device driver (with alert pin)
+/// Async TMP108 driver with an ALERT GPIO pin attached.
+///
+/// Wraps a bare [`Tmp108`] with a pin implementing
+/// [`embedded_hal_async::digital::Wait`] (and
+/// [`embedded_hal::digital::InputPin`]), so it can implement
+/// [`embedded_sensors_hal_async::temperature::TemperatureThresholdWait`].
+///
+/// # Notes on alert behavior
+///
+/// The driver's [`wait_for_temperature_threshold`][1] implementation
+/// relies on the `embedded-hal-async` [`Wait`][2] trait contract:
+/// implementations must report transitions that occur between `Wait`
+/// calls (e.g. via a pending-edge / latched-interrupt mechanism in the
+/// MCU's GPIO controller). If the HAL implementation drops pending
+/// edges, the driver will miss them — this is a property of the HAL,
+/// not the driver.
+///
+/// The chip's `Polarity` (active-low vs active-high) is read from the
+/// configuration register on every call to `wait_for_temperature_threshold`.
+/// Do **not** reconfigure polarity while a `wait_for_temperature_threshold`
+/// future is pending — the awaiting future will continue to wait for the
+/// old polarity while the chip's ALERT output follows the new one.
+///
+/// In Comparator mode the ALERT pin remains asserted as long as the
+/// temperature is outside the `[TLow + HYS, THigh − HYS]` band; calling
+/// `wait_for_temperature_threshold` in a tight loop while the chip is
+/// still over-temperature will return immediately on every iteration
+/// (because [`wait_for_low`][3] / [`wait_for_high`][4] return
+/// immediately when the pin is already at the requested level). For
+/// repeated-trigger workflows prefer Interrupt mode, or apply
+/// application-level backoff between iterations.
+///
+/// [1]: embedded_sensors_hal_async::temperature::TemperatureThresholdWait::wait_for_temperature_threshold
+/// [2]: embedded_hal_async::digital::Wait
+/// [3]: embedded_hal_async::digital::Wait::wait_for_low
+/// [4]: embedded_hal_async::digital::Wait::wait_for_high
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
 pub struct AlertTmp108<
     I2C: embedded_hal_async::i2c::I2c,
@@ -777,14 +839,41 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         user_result.and(cleanup_result)
     }
 
-    /// Wait for conversion to complete. This method will block for the amount
-    /// of time dictated by the CR bits in the `Configuration` register.
-    /// Caller is required to call this method from within their continuous
-    /// conversion closure.
+    /// Wait one conversion period, then read the temperature register.
+    ///
+    /// Reads the configuration register to discover the current
+    /// [`ConversionRate`], delays for one period (1/CR), and then reads
+    /// the temperature register. Intended for callers driving the chip
+    /// in [`Mode::Continuous`] (typically from inside a
+    /// [`continuous`][Self::continuous] closure) who want to align
+    /// reads with the chip's conversion cadence.
+    ///
+    /// # Stale-reading on first call
+    ///
+    /// The TMP108's conversion period (1/CR — 4 s, 1 s, 250 ms, or
+    /// 62.5 ms) is **not** the same as its conversion **time** (~30 ms
+    /// regardless of CR). After entering [`Mode::Continuous`] the chip's
+    /// next conversion is not phase-aligned with when you enabled it,
+    /// so the first call to this method may return the previous
+    /// conversion result. For "guaranteed fresh" semantics, use
+    /// [`one_shot`][Self::one_shot] followed by a delay of one period
+    /// and a [`temperature`][Self::temperature] read, or discard the
+    /// first reading after entering Continuous.
+    ///
+    /// # I²C cost per call
+    ///
+    /// Each call performs **two** I²C transactions: a configuration
+    /// read (to determine the CR) and a temperature read. Callers in
+    /// power- or bandwidth-sensitive loops who know they will not
+    /// change CR can avoid the per-call configuration read by calling
+    /// [`read_configuration`][Self::read_configuration] once, computing
+    /// the period delay themselves, and calling
+    /// [`temperature`][Self::temperature] directly.
     ///
     /// # Errors
     ///
-    /// `I2C::Error` when the I2C transaction fails
+    /// `I2C::Error` when either the configuration read or the
+    /// temperature read fails.
     ///
     /// (Doctest runs against the blocking API; the async variant has the same
     /// shape with `.await` after the calls.)
