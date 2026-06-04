@@ -928,7 +928,19 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     }
 
     fn to_celsius(t: i16) -> f32 {
-        f32::from(t / 16) * Self::CELSIUS_PER_BIT
+        // Per the datasheet the temperature and limit registers are
+        // left-aligned 12-bit signed values: the LSB is the bit at
+        // position 4 (0.0625 °C/LSB) and bits 3..0 are reserved=0.
+        // Compute the conversion as a single multiplication by
+        // CELSIUS_PER_BIT/16 (== 1/256 = 0.003_906_25, exactly
+        // representable in f32) instead of dividing by 16 first via
+        // integer division.
+        //
+        // For datasheet-conforming inputs (bits 3..0 == 0) this returns
+        // exactly the same f32 as before. For any non-zero low bits it
+        // returns the correct value instead of truncating toward zero
+        // (which was asymmetric for negative inputs).
+        f32::from(t) * (Self::CELSIUS_PER_BIT / 16.0)
     }
 
     /// Convert a temperature in degrees Celsius to the raw 12-bit signed
@@ -1315,7 +1327,6 @@ mod tests {
             assert_eq!(tmp.addr(), 0x48);
             let mut mock = tmp.destroy();
             mock.done();
-
             let mock = Mock::new(&expectations);
             let tmp = Tmp108::new_with_a0_vplus(mock);
             assert_eq!(tmp.addr(), 0x49);
@@ -1516,6 +1527,33 @@ mod tests {
 
             let mut mock = tmp108.destroy();
             mock.done();
+        }
+
+        #[test]
+        fn to_celsius_is_symmetric_around_zero() {
+            // For datasheet-conforming inputs (bits 3..0 == 0) the
+            // conversion is identical to the previous integer-division
+            // implementation. For inputs with non-zero low bits the new
+            // implementation no longer truncates toward zero, which was
+            // asymmetric for negative values.
+            //
+            // 0xFFFF as i16 = -1. Old code: f32::from(-1 / 16) * 0.0625 =
+            // f32::from(0) * 0.0625 = 0.0. New code: f32::from(-1) *
+            // (0.0625 / 16.0) = -0.003_906_25.
+            let cases: &[(i16, f32)] = &[
+                (0x0000, 0.0),
+                (0x0010, 0.0625),
+                (0xFFF0_u16 as i16, -0.0625),
+                (0x7FF0, 127.9375),
+                (0xC900_u16 as i16, -55.0),
+                // Non-zero low bits: symmetric resolution.
+                (0x0001, 0.003_906_25),
+                (0xFFFF_u16 as i16, -0.003_906_25),
+            ];
+            for (raw, expected) in cases {
+                let got = Tmp108::<Mock>::to_celsius(*raw);
+                assert_approx_eq!(got, *expected, 1e-5);
+            }
         }
     }
 
