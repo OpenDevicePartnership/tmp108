@@ -1028,18 +1028,26 @@ impl<I2C: AsyncI2c> AsyncRegisterInterface for Interface<I2C> {
 }
 
 /// Tmp108 Errors
+///
+/// The `E` parameter is the underlying I2C error type. The `P` parameter
+/// is the error type of an optional ALERT GPIO pin; it defaults to
+/// [`core::convert::Infallible`] so bare [`Tmp108`] (which has no pin)
+/// uses `Error<I2C::Error>` and never produces a [`Pin`][Self::Pin]
+/// error. [`AlertTmp108`] specializes to
+/// `Error<I2C::Error, ALERT::Error>` and uses the [`Pin`][Self::Pin]
+/// variant when the GPIO peripheral fails.
 #[derive(Debug)]
-pub enum Error<E: embedded_hal::i2c::Error> {
-    /// I2C Bus Error
+pub enum Error<E: embedded_hal::i2c::Error, P: embedded_hal::digital::Error = core::convert::Infallible> {
+    /// I2C bus error.
     Bus(E),
-    /// Invalid Input Error
+    /// Input failed validation (out of range, NaN, ±∞, unsupported value).
     InvalidInput,
-    /// Other Error
-    Other,
+    /// ALERT pin GPIO error.
+    Pin(P),
 }
 
 #[cfg(all(feature = "embedded-sensors-hal", not(feature = "async")))]
-impl<E: embedded_hal::i2c::Error> embedded_sensors_hal::sensor::Error for Error<E> {
+impl<E: embedded_hal::i2c::Error, P: embedded_hal::digital::Error> embedded_sensors_hal::sensor::Error for Error<E, P> {
     fn kind(&self) -> embedded_sensors_hal::sensor::ErrorKind {
         embedded_sensors_hal::sensor::ErrorKind::Other
     }
@@ -1058,7 +1066,9 @@ impl<I2C: embedded_hal::i2c::I2c> embedded_sensors_hal::temperature::Temperature
 }
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
-impl<E: embedded_hal_async::i2c::Error> embedded_sensors_hal_async::sensor::Error for Error<E> {
+impl<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Error> embedded_sensors_hal_async::sensor::Error
+    for Error<E, P>
+{
     fn kind(&self) -> embedded_sensors_hal_async::sensor::ErrorKind {
         embedded_sensors_hal_async::sensor::ErrorKind::Other
     }
@@ -1080,7 +1090,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature:
 impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait + embedded_hal::digital::InputPin>
     embedded_sensors_hal_async::sensor::ErrorType for AlertTmp108<I2C, ALERT>
 {
-    type Error = Error<I2C::Error>;
+    type Error = Error<I2C::Error, <ALERT as embedded_hal::digital::ErrorType>::Error>;
 }
 
 #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
@@ -1119,14 +1129,16 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.tmp108.set_low_limit(threshold).await
+        // Bare-Tmp108 set_*_limit returns Error<I2C::Error>; widen the Pin
+        // type parameter to the AlertTmp108-flavored Error.
+        self.tmp108.set_low_limit(threshold).await.map_err(widen_pin_err)
     }
 
     async fn set_temperature_threshold_high(
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.tmp108.set_high_limit(threshold).await
+        self.tmp108.set_high_limit(threshold).await.map_err(widen_pin_err)
     }
 }
 
@@ -1148,10 +1160,10 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
             // ALERT pin only resets when temperature falls within the range of (Tlow + HYS) and
             // (Thigh - HYS).
             (Thermostat::Comparator, Polarity::ActiveLow) => {
-                self.alert.wait_for_low().await.map_err(|_| Error::Other)?;
+                self.alert.wait_for_low().await.map_err(Error::Pin)?;
             }
             (Thermostat::Comparator, Polarity::ActiveHigh) => {
-                self.alert.wait_for_high().await.map_err(|_| Error::Other)?;
+                self.alert.wait_for_high().await.map_err(Error::Pin)?;
             }
 
             // In interrupt mode, the ALERT pin is immediately reset (by reading config register)
@@ -1160,11 +1172,11 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
             // If called in a loop, next iteration would wait even if temperature remains outside
             // threshold.
             (Thermostat::Interrupt, Polarity::ActiveLow) => {
-                self.alert.wait_for_falling_edge().await.map_err(|_| Error::Other)?;
+                self.alert.wait_for_falling_edge().await.map_err(Error::Pin)?;
                 let _ = self.tmp108.read_configuration().await.map_err(Error::Bus)?;
             }
             (Thermostat::Interrupt, Polarity::ActiveHigh) => {
-                self.alert.wait_for_rising_edge().await.map_err(|_| Error::Other)?;
+                self.alert.wait_for_rising_edge().await.map_err(Error::Pin)?;
                 let _ = self.tmp108.read_configuration().await.map_err(Error::Bus)?;
             }
         }
@@ -1213,7 +1225,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature:
             return Err(Error::InvalidInput);
         }
 
-        let mut config = self.read_configuration().await.map_err(|_| Error::Other)?;
+        let mut config = self.read_configuration().await.map_err(Error::Bus)?;
         config.hysteresis = snapped;
         self.configure(config).await.map_err(Error::Bus)
     }
@@ -1227,7 +1239,24 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
         &mut self,
         hysteresis: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.tmp108.set_temperature_threshold_hysteresis(hysteresis).await
+        self.tmp108
+            .set_temperature_threshold_hysteresis(hysteresis)
+            .await
+            .map_err(widen_pin_err)
+    }
+}
+
+/// Widen an `Error<E>` (with Pin = Infallible) to `Error<E, P>` for any
+/// `P`. Used by the `AlertTmp108` trait impls that delegate to bare
+/// `Tmp108` methods (which cannot themselves produce a `Pin` error).
+#[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
+fn widen_pin_err<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Error>(
+    e: Error<E, core::convert::Infallible>,
+) -> Error<E, P> {
+    match e {
+        Error::Bus(e) => Error::Bus(e),
+        Error::InvalidInput => Error::InvalidInput,
+        Error::Pin(never) => match never {},
     }
 }
 
@@ -1988,6 +2017,51 @@ mod tests {
 
             let mut mock = tmp108.destroy();
             mock.done();
+        }
+
+        #[cfg(feature = "embedded-sensors-hal-async")]
+        #[tokio::test]
+        async fn alert_pin_error_is_propagated_as_error_pin() {
+            use embedded_hal_mock::eh1::{MockError, digital};
+            use embedded_sensors_hal_async::temperature::TemperatureThresholdWait;
+
+            // Configure for Interrupt + ActiveLow so wait_for_falling_edge
+            // is the gating operation. The pin then errors; the driver
+            // must surface the GPIO error via Error::Pin(_), not swallow
+            // it (the pre-fix behavior collapsed all GPIO failures to
+            // Error::Other).
+            let i2c_expectations = vec![
+                // configure: read + write
+                Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
+                Transaction::write(0x48, vec![0x01, 0x26, 0x10]),
+                // wait_for_temperature_threshold reads cfg first
+                Transaction::write_read(0x48, vec![0x01], vec![0x26, 0x10]),
+            ];
+            let i2c_mock = Mock::new(&i2c_expectations);
+
+            let pin_err = MockError::Io(std::io::ErrorKind::Other);
+            let pin_expectations =
+                vec![digital::Transaction::wait_for_edge(digital::Edge::Falling).with_error(pin_err.clone())];
+            let pin_mock = digital::Mock::new(&pin_expectations);
+
+            let mut tmp108 = AlertTmp108::new_with_a0_gnd(i2c_mock, pin_mock);
+
+            let cfg = Config {
+                thermostat_mode: Thermostat::Interrupt,
+                alert_polarity: Polarity::ActiveLow,
+                ..Default::default()
+            };
+            tmp108.tmp108.configure(cfg).await.unwrap();
+
+            let result = tmp108.wait_for_temperature_threshold().await;
+            match result {
+                Err(Error::Pin(e)) => assert_eq!(e, pin_err),
+                other => panic!("expected Error::Pin, got {other:?}"),
+            }
+
+            let (mut i2c_mock, mut pin_mock) = tmp108.destroy();
+            i2c_mock.done();
+            pin_mock.done();
         }
     }
 }
