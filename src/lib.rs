@@ -1169,24 +1169,40 @@ impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature:
         &mut self,
         hysteresis: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        // Trait method takes a continuous range of f32 values as argument, but internally driver
-        // only accepts 4 discrete values for hysteresis.
+        // The trait method takes a continuous range of f32 °C values, but
+        // the chip only supports four discrete hysteresis settings:
+        // 0, 1, 2, and 4 °C. Snap the input to the nearest legal value
+        // within a tolerance band of 0.05 °C; reject anything outside the
+        // band (and any non-finite input) with `Error::InvalidInput`.
         //
-        // We ensure only a correct value for hysteresis is passed in, and return error otherwise.
-        let hysteresis = if (hysteresis - 0.0).abs() < f32::EPSILON {
-            Hysteresis::_0C
-        } else if (hysteresis - 1.0).abs() < f32::EPSILON {
-            Hysteresis::_1C
-        } else if (hysteresis - 2.0).abs() < f32::EPSILON {
-            Hysteresis::_2C
-        } else if (hysteresis - 4.0).abs() < f32::EPSILON {
-            Hysteresis::_4C
-        } else {
+        // The tolerance is generous enough to absorb ordinary float
+        // arithmetic (e.g. 0.1 + 0.9 rounding away from 1.0) while still
+        // surfacing genuinely unsupported requests like 3.0 °C.
+        const HYS_VALUES: &[(f32, Hysteresis)] = &[
+            (0.0, Hysteresis::_0C),
+            (1.0, Hysteresis::_1C),
+            (2.0, Hysteresis::_2C),
+            (4.0, Hysteresis::_4C),
+        ];
+        const HYS_TOLERANCE: f32 = 0.05;
+
+        if !hysteresis.is_finite() {
             return Err(Error::InvalidInput);
-        };
+        }
+
+        // HYS_VALUES is non-empty so min_by always returns Some.
+        let (closest, snapped) = HYS_VALUES
+            .iter()
+            .copied()
+            .min_by(|(a, _), (b, _)| (hysteresis - a).abs().total_cmp(&(hysteresis - b).abs()))
+            .expect("HYS_VALUES is non-empty");
+
+        if (hysteresis - closest).abs() > HYS_TOLERANCE {
+            return Err(Error::InvalidInput);
+        }
 
         let mut config = self.read_configuration().await.map_err(|_| Error::Other)?;
-        config.hysteresis = hysteresis;
+        config.hysteresis = snapped;
         self.configure(config).await.map_err(Error::Bus)
     }
 }
@@ -1845,6 +1861,95 @@ mod tests {
             let (mut i2c_mock, mut pin_mock) = tmp108.destroy();
             i2c_mock.done();
             pin_mock.done();
+        }
+
+        #[cfg(feature = "embedded-sensors-hal-async")]
+        #[tokio::test]
+        async fn hysteresis_snaps_within_tolerance() {
+            use embedded_sensors_hal_async::temperature::TemperatureHysteresis;
+
+            // For each legal value, every input within 0.05 °C must
+            // succeed and program the corresponding chip setting (no I2C
+            // mismatch). Each acceptance path performs: read cfg, write cfg.
+            //
+            // - 0.0 °C snaps to Hysteresis::_0C => HYS bits 0b00 => cfg word 0x0022 -> bytes [0x22, 0x00]
+            // - 1.0 °C snaps to Hysteresis::_1C => HYS bits 0b01 => cfg word 0x1022 -> bytes [0x22, 0x10]
+            // - 2.0 °C snaps to Hysteresis::_2C => HYS bits 0b10 => cfg word 0x2022 -> bytes [0x22, 0x20]
+            // - 4.0 °C snaps to Hysteresis::_4C => HYS bits 0b11 => cfg word 0x3022 -> bytes [0x22, 0x30]
+            //
+            // For each accepted input we expect: write-read of cfg, then a
+            // write of the new cfg. The chip's POR is 0x1022 (HYS=01).
+            let cases: &[(f32, [u8; 2])] = &[
+                // Exact-match accepted values.
+                (0.0, [0x22, 0x00]),
+                (1.0, [0x22, 0x10]),
+                (2.0, [0x22, 0x20]),
+                (4.0, [0x22, 0x30]),
+                // Within-tolerance inputs that previously failed under
+                // f32::EPSILON snapping.
+                (0.04_f32, [0x22, 0x00]),
+                (1.000_000_1_f32, [0x22, 0x10]),
+                (0.1_f32 + 0.9_f32, [0x22, 0x10]),
+                (1.95_f32, [0x22, 0x20]),
+                (3.97_f32, [0x22, 0x30]),
+            ];
+
+            // Each accepted input triggers:
+            //   1. read_configuration() in the hysteresis impl: write_read
+            //   2. configure() -> modify (read-modify-write): write_read + write
+            // The current cfg byte stream is the chip's POR value 0x1022 ->
+            // [0x22, 0x10]. After snapping the result is reflected in the
+            // HYS bits of the final write.
+            let mut expectations = Vec::new();
+            for (_, written) in cases {
+                // read_configuration
+                expectations.push(Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]));
+                // configure -> modify: read
+                expectations.push(Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]));
+                // configure -> modify: write
+                expectations.push(Transaction::write(0x48, vec![0x01, written[0], written[1]]));
+            }
+
+            let mock = Mock::new(&expectations);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for (input, _) in cases {
+                let r = tmp108.set_temperature_threshold_hysteresis(*input).await;
+                assert!(r.is_ok(), "input {input} should be accepted");
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[cfg(feature = "embedded-sensors-hal-async")]
+        #[tokio::test]
+        async fn hysteresis_rejects_out_of_tolerance_and_non_finite() {
+            use embedded_sensors_hal_async::temperature::TemperatureHysteresis;
+
+            // No I2C transactions expected; out-of-tolerance and non-finite
+            // inputs must be rejected before any bus traffic.
+            let mock = Mock::new(&[]);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            for bad in [-0.5_f32, 0.5_f32, 3.0_f32, 5.0_f32, -1.0_f32, 10.0_f32] {
+                let r = tmp108.set_temperature_threshold_hysteresis(bad).await;
+                assert!(
+                    matches!(r, Err(Error::InvalidInput)),
+                    "input {bad} should be rejected as InvalidInput, got {r:?}"
+                );
+            }
+
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                let r = tmp108.set_temperature_threshold_hysteresis(bad).await;
+                assert!(
+                    matches!(r, Err(Error::InvalidInput)),
+                    "input {bad} should be rejected as InvalidInput, got {r:?}"
+                );
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
         }
     }
 }
