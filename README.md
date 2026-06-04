@@ -49,7 +49,7 @@ let hal = Hal::new();
 let i2c = hal.i2c();
 let mut delay = hal.delay();
 
-let mut tmp = Tmp108::new_with_a0_gnd(i2c);
+let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
 
 tmp.continuous(async |t| {
     for _ in 0..5 {
@@ -68,7 +68,7 @@ tmp.continuous(async |t| {
 ```rust,ignore
 let mut tmp = AlertTmp108::new_with_a0_gnd(i2c, alert);
 
-tmp.tmp108
+tmp.sensor_mut()
     .configure(Config {
         thermostat_mode: Thermostat::Interrupt,
         alert_polarity: Polarity::ActiveLow,
@@ -96,18 +96,21 @@ See `examples/` for complete, runnable versions of each snippet (and more).
 
 ## Cargo features
 
-| Feature | Effect | Requires |
-|---------|--------|----------|
+| Feature | Effect | Implies |
+|---------|--------|---------|
 | (none)  | Blocking `Tmp108` over `embedded-hal`. | — |
-| `async` | Async `Tmp108` over `embedded-hal-async`. `Tmp108::continuous` is unlocked. | — |
+| `async` | Async `AsyncTmp108` over `embedded-hal-async`. `AsyncTmp108::continuous` is unlocked. | — |
 | `embedded-sensors-hal` | Blocking `TemperatureSensor` impl on `Tmp108`. | — |
-| `embedded-sensors-hal-async` | Async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` impls on `Tmp108`, plus the `AlertTmp108` wrapper with `TemperatureThresholdWait`. | `async` |
+| `embedded-sensors-hal-async` | Async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` impls on `AsyncTmp108`, plus the `AlertTmp108` wrapper with `TemperatureThresholdWait`. | `async` |
+
+Since 0.7.0 both `Tmp108` (blocking) and `AsyncTmp108` (async) are
+available simultaneously when both relevant features are enabled.
 
 ## Gotchas
 
-- **`Tmp108::new` does not take a delay.** The delay only appears on
-  `wait_for_temperature`, where it is genuinely needed to wait out a
-  conversion period.
+- **Constructors are infallible.** They take no delay; the delay only
+  appears on `wait_for_temperature`, where it is genuinely needed to
+  wait out a conversion period.
 - **Comparator vs interrupt mode latching.** In comparator mode the ALERT pin
   stays asserted until temperature returns inside `(T_low + HYS, T_high − HYS)`.
   In interrupt mode the pin clears as soon as the configuration register is
@@ -115,9 +118,14 @@ See `examples/` for complete, runnable versions of each snippet (and more).
   See `examples/alert_comparator.rs` for a demonstration.
 - **ALERT polarity is set on-chip.** Wire your pull resistor for the polarity
   you configured. Examples assume active-low + external pull-up.
-- **`Tmp108::continuous` is async-only.** For blocking continuous-mode use,
-  call `configure(...)` to set `Mode::Continuous` manually, loop on
-  `wait_for_temperature(&mut delay)`, then call `shutdown()`.
+- **`AsyncTmp108::continuous` is async-only.** For blocking continuous-mode
+  use, call `Tmp108::configure(...)` to set `Mode::Continuous` manually,
+  loop on `Tmp108::wait_for_temperature(&mut delay)`, then call
+  `Tmp108::shutdown()`.
+- **`AsyncTmp108::continuous` future is not cancel-safe.** Dropping it
+  before completion (e.g. via `embassy_futures::select!` or
+  `tokio::time::timeout`) leaves the chip in `Mode::Continuous`. See
+  the method's doc.
 - **Temperature scale.** Raw register values are 12-bit signed in the upper
   bits of a 16-bit register; the driver returns `f32` Celsius at
   0.0625 °C/LSB.
