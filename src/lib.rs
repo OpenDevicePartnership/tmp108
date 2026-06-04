@@ -774,7 +774,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// # Errors
     ///
-    /// `I2C::Error` when the I2C transaction fails
+    /// - `Error::InvalidInput` if `limit` is NaN, ±∞, or outside
+    ///   `[-128.0, 127.9375] °C` (the representable range of the chip's
+    ///   12-bit fixed-point limit register).
+    /// - `Error::Bus` when the I2C transaction fails.
     ///
     /// (Doctest runs against the blocking API; the async variant has the same
     /// shape with `.await` after the call.)
@@ -796,14 +799,18 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # i2c.done();
     /// # }
     /// ```
-    pub async fn set_low_limit(&mut self, limit: f32) -> Result<(), I2C::Error> {
-        let raw = Self::to_raw(limit).to_be_bytes();
+    pub async fn set_low_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
+        let raw = Self::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
 
         #[cfg(feature = "async")]
-        self.inner.t_low().write_async(|r| *r = TLow::from(raw)).await?;
+        self.inner
+            .t_low()
+            .write_async(|r| *r = TLow::from(raw))
+            .await
+            .map_err(Error::Bus)?;
 
         #[cfg(not(feature = "async"))]
-        self.inner.t_low().write(|r| *r = TLow::from(raw))?;
+        self.inner.t_low().write(|r| *r = TLow::from(raw)).map_err(Error::Bus)?;
 
         Ok(())
     }
@@ -848,7 +855,10 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     ///
     /// # Errors
     ///
-    /// `I2C::Error` when the I2C transaction fails
+    /// - `Error::InvalidInput` if `limit` is NaN, ±∞, or outside
+    ///   `[-128.0, 127.9375] °C` (the representable range of the chip's
+    ///   12-bit fixed-point limit register).
+    /// - `Error::Bus` when the I2C transaction fails.
     ///
     /// (Doctest runs against the blocking API; the async variant has the same
     /// shape with `.await` after the call.)
@@ -870,14 +880,21 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
     /// # i2c.done();
     /// # }
     /// ```
-    pub async fn set_high_limit(&mut self, limit: f32) -> Result<(), I2C::Error> {
-        let raw = Self::to_raw(limit).to_be_bytes();
+    pub async fn set_high_limit(&mut self, limit: f32) -> Result<(), Error<I2C::Error>> {
+        let raw = Self::to_raw(limit).ok_or(Error::InvalidInput)?.to_be_bytes();
 
         #[cfg(feature = "async")]
-        self.inner.t_high().write_async(|r| *r = THigh::from(raw)).await?;
+        self.inner
+            .t_high()
+            .write_async(|r| *r = THigh::from(raw))
+            .await
+            .map_err(Error::Bus)?;
 
         #[cfg(not(feature = "async"))]
-        self.inner.t_high().write(|r| *r = THigh::from(raw))?;
+        self.inner
+            .t_high()
+            .write(|r| *r = THigh::from(raw))
+            .map_err(Error::Bus)?;
 
         Ok(())
     }
@@ -886,9 +903,23 @@ impl<I2C: AsyncI2c> Tmp108<I2C> {
         f32::from(t / 16) * Self::CELSIUS_PER_BIT
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    fn to_raw(t: f32) -> i16 {
-        (t * 16.0 / Self::CELSIUS_PER_BIT) as i16
+    /// Convert a temperature in degrees Celsius to the raw 12-bit signed
+    /// fixed-point representation used by the chip's TLow/THigh registers.
+    ///
+    /// Returns `None` for inputs that are NaN, ±∞, or outside the
+    /// representable range `[-128.0, 127.9375] °C`.
+    fn to_raw(t: f32) -> Option<i16> {
+        // i16 representable range divided by the 16x scale factor.
+        const MIN: f32 = -128.0;
+        const MAX: f32 = 127.937_5;
+
+        if !t.is_finite() || !(MIN..=MAX).contains(&t) {
+            return None;
+        }
+
+        // Range-checked above; this cast cannot truncate.
+        #[allow(clippy::cast_possible_truncation)]
+        Some((t * 16.0 / Self::CELSIUS_PER_BIT) as i16)
     }
 }
 
@@ -1029,14 +1060,14 @@ impl<I2C: embedded_hal_async::i2c::I2c> embedded_sensors_hal_async::temperature:
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.set_low_limit(threshold).await.map_err(Error::Bus)
+        self.set_low_limit(threshold).await
     }
 
     async fn set_temperature_threshold_high(
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.set_high_limit(threshold).await.map_err(Error::Bus)
+        self.set_high_limit(threshold).await
     }
 }
 
@@ -1048,14 +1079,14 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.tmp108.set_low_limit(threshold).await.map_err(Error::Bus)
+        self.tmp108.set_low_limit(threshold).await
     }
 
     async fn set_temperature_threshold_high(
         &mut self,
         threshold: embedded_sensors_hal_async::temperature::DegreesCelsius,
     ) -> Result<(), Self::Error> {
-        self.tmp108.set_high_limit(threshold).await.map_err(Error::Bus)
+        self.tmp108.set_high_limit(threshold).await
     }
 }
 
@@ -1419,6 +1450,29 @@ mod tests {
             let mut mock = tmp108.destroy();
             mock.done();
         }
+
+        #[test]
+        fn reject_invalid_set_limit_inputs() {
+            // No I2C transactions are expected; out-of-range / non-finite
+            // inputs must be rejected before any bus traffic.
+            let mock = Mock::new(&[]);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Values just outside the representable [-128.0, 127.9375] range.
+            for bad in [128.0_f32, 127.940_f32, -128.001_f32, -200.0_f32, 200.0_f32] {
+                assert!(matches!(tmp108.set_low_limit(bad), Err(Error::InvalidInput)));
+                assert!(matches!(tmp108.set_high_limit(bad), Err(Error::InvalidInput)));
+            }
+
+            // Non-finite values.
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                assert!(matches!(tmp108.set_low_limit(bad), Err(Error::InvalidInput)));
+                assert!(matches!(tmp108.set_high_limit(bad), Err(Error::InvalidInput)));
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
     }
 
     #[cfg(feature = "async")]
@@ -1611,6 +1665,29 @@ mod tests {
 
                 let temp = result.unwrap();
                 assert_approx_eq!(temp, *t, 1e-4);
+            }
+
+            let mut mock = tmp108.destroy();
+            mock.done();
+        }
+
+        #[tokio::test]
+        async fn reject_invalid_set_limit_inputs() {
+            // No I2C transactions are expected; out-of-range / non-finite
+            // inputs must be rejected before any bus traffic.
+            let mock = Mock::new(&[]);
+            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
+
+            // Values just outside the representable [-128.0, 127.9375] range.
+            for bad in [128.0_f32, 127.940_f32, -128.001_f32, -200.0_f32, 200.0_f32] {
+                assert!(matches!(tmp108.set_low_limit(bad).await, Err(Error::InvalidInput)));
+                assert!(matches!(tmp108.set_high_limit(bad).await, Err(Error::InvalidInput)));
+            }
+
+            // Non-finite values.
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                assert!(matches!(tmp108.set_low_limit(bad).await, Err(Error::InvalidInput)));
+                assert!(matches!(tmp108.set_high_limit(bad).await, Err(Error::InvalidInput)));
             }
 
             let mut mock = tmp108.destroy();
