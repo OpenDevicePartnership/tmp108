@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Install stable
@@ -41,7 +41,7 @@ jobs:
 
     name: ubuntu / ${{ matrix.msrv }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Install ${{ matrix.msrv }}
