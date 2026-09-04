@@ -4,6 +4,95 @@ All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-09-04
+
+Two breaking changes land together: the register description moves to
+**device-driver 2.1.0** and its DDSL manifest, and the temperature API
+moves off `f32` onto a **`Celsius`** newtype.
+
+### Breaking
+
+- Temperatures crossing the driver boundary are now `Celsius`, a
+  newtype over sixteenths of a degree constrained to the part's 12-bit
+  `-128.0..=127.9375 °C` range, instead of `f32`.
+  - `temperature`, `low_limit`, `high_limit` and
+    `wait_for_temperature` return `Celsius` on both `Tmp108` and
+    `AsyncTmp108`. **Migration:** call `.to_degrees()` to recover the
+    float.
+  - `set_low_limit` and `set_high_limit` take `Celsius`.
+    **Migration:** build the argument with `Celsius::try_from_degrees`.
+- `set_low_limit` and `set_high_limit` return
+  `Result<(), I2C::Error>` again, not `Result<(), Error<I2C::Error>>`.
+  Their only non-bus failure was `Error::InvalidInput`, raised when the
+  `f32` argument was unrepresentable; a `Celsius` cannot be
+  unrepresentable, so the variant became unreachable. `Error::InvalidInput`
+  itself stays — the `embedded-sensors-hal` and
+  `embedded-sensors-hal-async` trait impls keep their
+  `DegreesCelsius` (`f32`) signatures and still need it.
+- DDSL identifiers cannot start with `_`, so two enums were renamed:
+  - `ConversionRate::_0_25Hz` → `ConversionRate::QuarterHz`
+  - `ConversionRate::_1Hz` → `ConversionRate::OneHz`
+  - `ConversionRate::_4Hz` → `ConversionRate::FourHz`
+  - `ConversionRate::_16Hz` → `ConversionRate::SixteenHz`
+  - `Hysteresis::_0C` → `Hysteresis::ZeroC`
+  - `Hysteresis::_1C` → `Hysteresis::OneC`
+  - `Hysteresis::_2C` → `Hysteresis::TwoC`
+  - `Hysteresis::_4C` → `Hysteresis::FourC`
+- The MSRV is raised from 1.90.0 to 1.94.0, which device-driver 2.1.0
+  requires.
+
+### Behavior changes
+
+- Encoding a temperature now rounds half away from zero where the old
+  `ops::to_raw` truncated: 25.03 °C used to land on 25.0 °C and now
+  lands on 25.0625 °C.
+- Decoding now arithmetic-shifts the register right by four rather than
+  scaling by 1/256, discarding the reserved low nibble instead of
+  folding it into the result. The datasheet (SBOS663A) hardwires bits
+  D3..D0 of the temperature register to 0 (Table 6, §7.5.2) and gives
+  the same layout for T_LOW and T_HIGH (Table 12), so discarding them
+  is correct. This also fixes the datasheet's own power-on T_HIGH value
+  `0x7FF8`, which carries a stray bit 3: it used to decode as
+  127.96875 °C, outside the part's range, and now decodes as the
+  documented 127.9375 °C.
+
+### Added
+
+- `Celsius`, a newtype over sixteenths of a degree with the invariant
+  `-2048..=2047`. Constructors `Celsius::from_sixteenths` and
+  `Celsius::try_from_degrees`; accessors `sixteenths()` and
+  `to_degrees()`. `Display` honours precision, so `{t:.2}` renders as
+  before. Decoding a register is total: every one of the 65,536
+  possible bit patterns names a temperature in range.
+- `OutOfRange`, the error returned by the `Celsius` constructors, with
+  `TooLow`, `TooHigh` and `NotANumber` variants.
+- Exhaustive tests: the `Celsius` suite walks all 65,536 register words
+  and all 4,096 representable temperatures rather than sampling, and a
+  new suite walks the `Config` and `Mode` domains exhaustively.
+
+### Changed
+
+- `device-driver` 1.0.9 → 2.1.0. The v2 register interface splits the
+  `Error` / `AddressType` associated types out into a
+  `RegisterInterfaceBase` supertrait, drops the `size_bits` parameter,
+  adds a `&FieldsetMetadata` parameter, and makes writes take
+  `&mut [u8]`; both `Interface` and `AsyncInterface` are adapted.
+  Fieldsets are emitted at the crate root instead of a `field_sets`
+  submodule, and a fieldset's `Default` is now all-zeroes rather than
+  the register reset value (which moved onto the register operation).
+- The register description migrates from `tmp108.toml` to
+  `tmp108.ddsl`; `src/inner.rs` is regenerated with
+  device-driver-cli 2.1.0.
+- With `default-features = false`, device-driver 2.1.0 pulls in no
+  transitive dependencies at all — v1's default `dsl`/`json`/`yaml`/
+  `toml` features became opt-in and none are enabled.
+- `ops::to_raw`, `ops::to_celsius`, `CELSIUS_PER_BIT`,
+  `LIMIT_MIN_CELSIUS` and `LIMIT_MAX_CELSIUS` are superseded by
+  `Celsius` and removed.
+- Releases are automated with release-plz.
+- Dependabot now caps the number of open PRs instead of ignoring
+  version bumps.
+
 ## [0.7.0] — 2026-06-04
 
 An architectural refactor: the single `maybe-async-cfg`-generated
