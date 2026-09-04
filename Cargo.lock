@@ -198,9 +198,12 @@ dependencies = [
 
 [[package]]
 name = "embedded-sensors-hal"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "971cd616a2326c63f660375e485e2f4573575b0bd293d228d7817c2b07be3475"
+checksum = "8c703756bee31e7aaf55d8fb6dcf7337cfc231cfb4a3ad34b9df509846fd9001"
+dependencies = [
+ "paste",
+]
 
 [[package]]
 name = "embedded-sensors-hal-async"
