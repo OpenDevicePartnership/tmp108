@@ -1,24 +1,24 @@
-# This workflow releases the crate with release-plz.
+# This workflow publishes the crate with release-plz.
 #
-# It runs two jobs on every push to main:
+# The version and CHANGELOG.md are maintained by hand, in the same pull
+# request as the change they describe (see AGENTS.md). This workflow does
+# not open release pull requests and does not touch the changelog. Its only
+# job is to notice that `main` carries a version which is not yet on
+# crates.io, publish it, tag it, and cut the GitHub release with the body
+# taken from the matching CHANGELOG.md section.
 #
-# - release-plz-pr opens (or updates) a release pull request containing the
-#   version bump and the generated changelog, derived from the Conventional
-#   Commits since the last release.
-# - release-plz-release publishes to crates.io, then creates the git tag and
-#   GitHub release. Because release_always is false in release-plz.toml, it
-#   only publishes once the release PR is merged.
+# A push that does not change the version is a no-op.
 #
 # Publishing uses crates.io Trusted Publishing. There is deliberately no
 # CARGO_REGISTRY_TOKEN secret and no rust-lang/crates-io-auth-action step:
 # release-plz performs the OIDC token exchange itself, and only needs the
-# id-token: write permission on the release job.
+# id-token: write permission.
 #
 # Trusted Publishing must also be configured on crates.io for this crate, at
 # https://crates.io/crates/tmp108/settings, with:
 #
-#   Repository owner: OpenDevicePartnership
-#   Repository name:  tmp108
+#   Repository owner:  OpenDevicePartnership
+#   Repository name:   tmp108
 #   Workflow filename: release.yml
 #
 # The workflow filename is part of the trust relationship, so renaming this
@@ -33,7 +33,7 @@ on:
 name: release
 
 jobs:
-  release-plz-release:
+  release:
     runs-on: ubuntu-latest
     name: release
     # Never run in forks: they have no crates.io trust relationship, and the
@@ -43,13 +43,13 @@ jobs:
     permissions:
       # Push the tag and create the GitHub release.
       contents: write
-      # Detect the release PR and the commits it contains.
+      # Detect the commits belonging to the merged pull request.
       pull-requests: read
       # Mint the short-lived crates.io token via OIDC.
       id-token: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -61,39 +61,5 @@ jobs:
         uses: release-plz/action@v0.5
         with:
           command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release-plz-pr:
-    runs-on: ubuntu-latest
-    name: release PR
-    if: ${{ github.repository_owner == 'OpenDevicePartnership' }}
-
-    permissions:
-      # Push to the release PR branch.
-      contents: write
-      # Create and update the release PR.
-      pull-requests: write
-
-    # Serialise release PR updates so two pushes cannot race and conflict.
-    # Deliberately not applied to the release job, where cancelling a pending
-    # run could skip a release entirely.
-    concurrency:
-      group: release-plz-pr-${{ github.ref }}
-      cancel-in-progress: false
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run release-plz release-pr
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

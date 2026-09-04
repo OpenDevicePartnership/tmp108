@@ -297,14 +297,39 @@ Most dev-deps use `criteria = "safe-to-run"`. Use
 released binary or library (build-script dependencies for proc macros
 called from `src/`, etc.).
 
-### 9. Semver: bumping the crate version is part of the change
+### 9. Semver: bump the version and write the changelog in the same PR
 
-If you change a public signature, add or remove a `pub` item, or
-modify a trait bound on a `pub fn`,
-`cargo semver-checks check-release` will fail CI until you bump the
-version in `Cargo.toml`. **Bump in the same PR**, not later. Major
-bumps need a `BREAKING CHANGE:` footer in the commit message (per
-Conventional Commits).
+The version in `Cargo.toml` and the entry in `CHANGELOG.md` are both
+maintained **by hand**, in the same pull request as the change they
+describe. `release-plz` is not given ownership of either.
+
+If you change a public signature, add or remove a `pub` item, or modify a
+trait bound on a `pub fn`, `cargo semver-checks check-release` will fail
+CI until you bump the version. Bump in the same PR, not later. While the
+crate is `0.x`, a breaking change bumps the minor; once it reaches `1.0`
+it bumps the major. Either way the commit needs `!` after the type and a
+`BREAKING CHANGE:` footer.
+
+Write the `CHANGELOG.md` entry by hand too. The file carries migration
+guidance -- before/after snippets, datasheet citations, the reasoning
+behind a behavior change -- that cannot be derived from commit subjects,
+so generating it would be a downgrade. Describe the delta from the last
+**published** version, which is not always the previous entry: 0.6.0 and
+0.7.0 were once bumped in this repository without ever being released,
+and the entries written against them contradicted each other.
+
+`.github/workflows/release.yml` then does the mechanical part. When a
+version that is not yet on crates.io lands on `main`, release-plz
+publishes it, tags it, and cuts a GitHub release whose body is the
+matching `CHANGELOG.md` section. A push that does not change the version
+is a no-op. There are no release pull requests.
+
+Publishing uses crates.io Trusted Publishing. There is deliberately no
+`CARGO_REGISTRY_TOKEN` secret and no `rust-lang/crates-io-auth-action`
+step: release-plz performs the OIDC exchange itself and only needs
+`id-token: write`. The trust relationship is keyed on the repository
+*and the workflow filename*, so renaming `release.yml` means updating it
+at <https://crates.io/crates/tmp108/settings> too.
 
 ### 10. The `device-driver` crate is a runtime dependency
 
@@ -411,8 +436,9 @@ certify the Developer Certificate of Origin.
    its level of feature coverage, and pass clippy.
 6. **PRs start as drafts.** Per `CONTRIBUTING.md` — make sure all CI
    workflows pass on the draft before requesting reviewers.
-7. **Bump the version when public API changes.** Don't leave it for a
-   follow-up PR; `cargo-semver-checks` will fail and block merge.
+7. **Bump the version and write the changelog entry in the same PR.**
+   Both are maintained by hand; see Gotcha #9. `cargo-semver-checks` will
+   fail and block merge if the bump is missing.
 
 ---
 
@@ -431,7 +457,7 @@ certify the Developer Certificate of Origin.
 | A README usage snippet | Marker region in an example file + matching `<!-- snippet: NAME -->` block in `README.md`; register in `scripts/check-readme-snippets.sh` |
 | A design document | `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` |
 | An implementation plan | `docs/superpowers/plans/YYYY-MM-DD-<topic>.md` |
-| A user-visible change | An entry in `CHANGELOG.md` under the next-unreleased version's appropriate section |
+| A user-visible change | An entry in `CHANGELOG.md` under the next-unreleased version, plus the matching `version` bump in `Cargo.toml` |
 
 ---
 

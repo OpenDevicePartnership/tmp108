@@ -1,35 +1,28 @@
 # Release-plz configuration.
 #
+# This repository hand-writes `CHANGELOG.md` and hand-bumps the version in
+# the same pull request as the change. The changelog carries migration
+# guidance -- before/after snippets, datasheet citations, the reasoning
+# behind a behavior change -- that cannot be derived from commit subjects,
+# so generating it would be a downgrade.
+#
+# release-plz is therefore used for one job only: once a version that is not
+# yet on crates.io lands on `main`, publish it, tag it, and cut the GitHub
+# release. It does not open release pull requests and does not touch the
+# changelog.
+#
 # Docs: https://release-plz.dev/docs/config
 
 [workspace]
-# Keep the release PR obviously distinguishable in the PR list.
-pr_labels = ["release"]
+# The changelog is written by hand. See AGENTS.md, "Releases".
+changelog_update = false
 
-# Only publish when the release PR is merged, rather than on every push to
-# main. Without this, a crate is published the moment a commit lands.
-release_always = false
+# Publish whenever `main` carries a version that is not yet on crates.io,
+# rather than only when a release PR merges. Because the version is bumped
+# by hand in the PR that makes the change, there is no release PR to wait
+# for. A push that does not change the version is a no-op: the version is
+# already published.
+release_always = true
 
-[changelog]
-# `commit_parsers` below skip `chore` and `ci` commits, but a breaking change
-# must never be silently dropped from the changelog.
-protect_breaking_commits = true
-
-# The default parser groups everything except `feat` and `fix` under "Other",
-# which buried a breaking `refactor!` commit. These map the conventional commit
-# types this repository actually uses.
-#
-# Group names carry an HTML comment prefix purely to force ordering: git-cliff
-# sorts groups alphabetically, and the comment is invisible once rendered.
-commit_parsers = [
-  { message = "^feat", group = "<!-- 0 -->Added" },
-  { message = "^fix", group = "<!-- 1 -->Fixed" },
-  { message = "^refactor", group = "<!-- 2 -->Changed" },
-  { message = "^perf", group = "<!-- 3 -->Performance" },
-  { message = "^build", group = "<!-- 4 -->Build system" },
-  { message = "^test", group = "<!-- 5 -->Testing" },
-  { message = "^docs", group = "<!-- 6 -->Documentation" },
-  { message = "^chore", skip = true },
-  { message = "^ci", skip = true },
-  { message = "^.*", group = "<!-- 7 -->Other" },
-]
+# The release body is taken from the matching section of CHANGELOG.md.
+git_release_enable = true
