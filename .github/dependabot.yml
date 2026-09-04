@@ -8,12 +8,13 @@ updates:
     directory: /
     schedule:
       interval: daily
-    ignore:
-      - dependency-name: "*"
-        # patch and minor updates don't matter for libraries as consumers of this library build
-        # with their own lockfile, rather than the version specified in this library's lockfile
-        # remove this ignore rule if your package has binaries to ensure that the binaries are
-        # built with the exact set of dependencies and those are up to date.
-        update-types:
-          - "version-update:semver-patch"
-          - "version-update:semver-minor"
+    # Cap the number of concurrently open PRs rather than filtering by update
+    # type. An `ignore` rule on semver-patch and semver-minor also suppresses
+    # Dependabot *security* updates, and since security fixes almost always
+    # ship as patch or minor releases, that silences nearly all of them.
+    #
+    # Patch and minor bumps genuinely don't matter to consumers of this
+    # library, who build with their own lockfile. They do matter to this
+    # repository's CI, which runs every job with `--locked` and checks the
+    # committed lockfile with `cargo deny`.
+    open-pull-requests-limit: 5
