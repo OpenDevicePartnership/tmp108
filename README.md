@@ -132,7 +132,7 @@ available simultaneously when both relevant features are enabled.
 
 ## MSRV
 
-Rust 1.90 and up.
+Rust 1.94 and up.
 
 ## License
 

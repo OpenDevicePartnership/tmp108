@@ -43,7 +43,7 @@
 
 #[cfg(feature = "async")]
 use device_driver::AsyncRegisterInterface;
-use device_driver::RegisterInterface;
+use device_driver::{FieldsetMetadata, RegisterInterface, RegisterInterfaceBase};
 use embedded_hal::delay::DelayNs;
 use embedded_hal::i2c::I2c;
 #[cfg(feature = "async")]
@@ -58,9 +58,8 @@ use embedded_hal_async::i2c::I2c as AsyncI2c;
 #[allow(unused)]
 mod inner;
 
-use crate::inner::Inner;
-use crate::inner::field_sets::{THigh, TLow};
 pub use crate::inner::{ConversionRate, Hysteresis, Mode, Polarity, Thermostat};
+use crate::inner::{Inner, THigh, TLow};
 
 /// A0 pin logic level representation.
 #[derive(Debug, Default)]
@@ -105,8 +104,8 @@ impl Default for Config {
         Self {
             thermostat_mode: Thermostat::Comparator,
             alert_polarity: Polarity::ActiveLow,
-            conversion_rate: ConversionRate::_1Hz,
-            hysteresis: Hysteresis::_1C,
+            conversion_rate: ConversionRate::OneHz,
+            hysteresis: Hysteresis::OneC,
         }
     }
 }
@@ -127,7 +126,7 @@ pub(crate) mod ops {
     use crate::Config;
     #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
     use crate::Hysteresis;
-    use crate::inner::field_sets::Configuration;
+    use crate::inner::Configuration;
 
     /// Temperature register LSB, in °C, per the TMP108 datasheet.
     pub(crate) const CELSIUS_PER_BIT: f32 = 0.0625;
@@ -188,10 +187,10 @@ pub(crate) mod ops {
     #[cfg(all(feature = "embedded-sensors-hal-async", feature = "async"))]
     pub(crate) fn snap_hysteresis(input: f32) -> Option<Hysteresis> {
         const HYS_VALUES: &[(f32, Hysteresis)] = &[
-            (0.0, Hysteresis::_0C),
-            (1.0, Hysteresis::_1C),
-            (2.0, Hysteresis::_2C),
-            (4.0, Hysteresis::_4C),
+            (0.0, Hysteresis::ZeroC),
+            (1.0, Hysteresis::OneC),
+            (2.0, Hysteresis::TwoC),
+            (4.0, Hysteresis::FourC),
         ];
 
         if !input.is_finite() {
@@ -242,6 +241,7 @@ pub(crate) mod ops {
 /// For the asynchronous flavor, see [`AsyncTmp108`].
 pub struct Tmp108<I2C: I2c> {
     inner: Inner<Interface<I2C>>,
+    addr: u8,
 }
 
 /// Asynchronous TMP108 driver.
@@ -254,6 +254,7 @@ pub struct Tmp108<I2C: I2c> {
 #[cfg(feature = "async")]
 pub struct AsyncTmp108<I2C: AsyncI2c> {
     inner: Inner<AsyncInterface<I2C>>,
+    addr: u8,
 }
 
 impl<I2C: I2c> Tmp108<I2C> {
@@ -272,9 +273,10 @@ impl<I2C: I2c> Tmp108<I2C> {
     /// ```
     pub fn new(i2c: I2C, a0: A0) -> Self {
         let interface = Interface::new(i2c, a0);
+        let addr = interface.addr;
         let inner = Inner::new(interface);
 
-        Self { inner }
+        Self { inner, addr }
     }
 
     /// Create a new TMP108 instance with A0 tied to GND, resulting in
@@ -363,7 +365,7 @@ impl<I2C: I2c> Tmp108<I2C> {
     /// # i2c.done();
     /// ```
     pub fn addr(&self) -> u8 {
-        self.inner.interface.addr
+        self.addr
     }
 
     /// Destroy the driver instance, return the I2C bus instance.
@@ -379,7 +381,7 @@ impl<I2C: I2c> Tmp108<I2C> {
     /// i2c.done();
     /// ```
     pub fn destroy(self) -> I2C {
-        self.inner.interface.i2c
+        self.inner.free().i2c
     }
 }
 
@@ -402,9 +404,10 @@ impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
     /// ```
     pub fn new(i2c: I2C, a0: A0) -> Self {
         let interface = AsyncInterface::new(i2c, a0);
+        let addr = interface.addr;
         let inner = Inner::new(interface);
 
-        Self { inner }
+        Self { inner, addr }
     }
 
     /// Create a new TMP108 instance with A0 tied to GND, resulting in
@@ -503,7 +506,7 @@ impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
     /// # });
     /// ```
     pub fn addr(&self) -> u8 {
-        self.inner.interface.addr
+        self.addr
     }
 
     /// Destroy the driver instance, return the I2C bus instance.
@@ -521,7 +524,7 @@ impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
     /// # });
     /// ```
     pub fn destroy(self) -> I2C {
-        self.inner.interface.i2c
+        self.inner.free().i2c
     }
 
     /// Create a new [`AlertTmp108`] instance by consuming the original
@@ -910,8 +913,8 @@ impl<I2C: I2c> Tmp108<I2C> {
     /// tmp.configure(Config {
     ///     thermostat_mode: Thermostat::Interrupt,
     ///     alert_polarity: Polarity::ActiveHigh,
-    ///     conversion_rate: ConversionRate::_16Hz,
-    ///     hysteresis: Hysteresis::_4C,
+    ///     conversion_rate: ConversionRate::SixteenHz,
+    ///     hysteresis: Hysteresis::FourC,
     /// }).unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
@@ -1234,8 +1237,8 @@ impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
     /// tmp.configure(Config {
     ///     thermostat_mode: Thermostat::Interrupt,
     ///     alert_polarity: Polarity::ActiveHigh,
-    ///     conversion_rate: ConversionRate::_16Hz,
-    ///     hysteresis: Hysteresis::_4C,
+    ///     conversion_rate: ConversionRate::SixteenHz,
+    ///     hysteresis: Hysteresis::FourC,
     /// }).await.unwrap();
     /// # let mut i2c = tmp.destroy();
     /// # i2c.done();
@@ -1564,10 +1567,10 @@ impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
 /// Compute the chip's conversion period (1/CR) in microseconds.
 const fn conversion_period_us(rate: ConversionRate) -> u32 {
     match rate {
-        ConversionRate::_0_25Hz => 4_000_000,
-        ConversionRate::_1Hz => 1_000_000,
-        ConversionRate::_4Hz => 250_000,
-        ConversionRate::_16Hz => 62_500,
+        ConversionRate::QuarterHz => 4_000_000,
+        ConversionRate::OneHz => 1_000_000,
+        ConversionRate::FourHz => 250_000,
+        ConversionRate::SixteenHz => 62_500,
     }
 }
 
@@ -1587,11 +1590,18 @@ impl<I2C: I2c> Interface<I2C> {
     }
 }
 
-impl<I2C: I2c> RegisterInterface for Interface<I2C> {
+impl<I2C: I2c> RegisterInterfaceBase for Interface<I2C> {
     type Error = I2C::Error;
     type AddressType = u8;
+}
 
-    fn write_register(&mut self, address: Self::AddressType, _size_bits: u32, data: &[u8]) -> Result<(), Self::Error> {
+impl<I2C: I2c> RegisterInterface for Interface<I2C> {
+    fn write_register(
+        &mut self,
+        address: Self::AddressType,
+        data: &mut [u8],
+        _metadata: &FieldsetMetadata,
+    ) -> Result<(), Self::Error> {
         debug_assert_eq!(data.len(), 2, "TMP108 registers are 16-bit");
         let mut buf = [0; 3];
         buf[0] = address;
@@ -1602,8 +1612,8 @@ impl<I2C: I2c> RegisterInterface for Interface<I2C> {
     fn read_register(
         &mut self,
         address: Self::AddressType,
-        _size_bits: u32,
         data: &mut [u8],
+        _metadata: &FieldsetMetadata,
     ) -> Result<(), Self::Error> {
         self.i2c.write_read(self.addr, &[address], data)
     }
@@ -1628,15 +1638,18 @@ impl<I2C: AsyncI2c> AsyncInterface<I2C> {
 }
 
 #[cfg(feature = "async")]
-impl<I2C: AsyncI2c> AsyncRegisterInterface for AsyncInterface<I2C> {
+impl<I2C: AsyncI2c> RegisterInterfaceBase for AsyncInterface<I2C> {
     type Error = I2C::Error;
     type AddressType = u8;
+}
 
+#[cfg(feature = "async")]
+impl<I2C: AsyncI2c> AsyncRegisterInterface for AsyncInterface<I2C> {
     async fn write_register(
         &mut self,
         address: Self::AddressType,
-        _size_bits: u32,
-        data: &[u8],
+        data: &mut [u8],
+        _metadata: &FieldsetMetadata,
     ) -> Result<(), Self::Error> {
         debug_assert_eq!(data.len(), 2, "TMP108 registers are 16-bit");
         let mut buf = [0; 3];
@@ -1648,8 +1661,8 @@ impl<I2C: AsyncI2c> AsyncRegisterInterface for AsyncInterface<I2C> {
     async fn read_register(
         &mut self,
         address: Self::AddressType,
-        _size_bits: u32,
         data: &mut [u8],
+        _metadata: &FieldsetMetadata,
     ) -> Result<(), Self::Error> {
         self.i2c.write_read(self.addr, &[address], data).await
     }
@@ -1907,18 +1920,34 @@ fn widen_pin_err<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Er
 
 #[cfg(test)]
 mod tests {
-    use super::inner::field_sets::Configuration;
+    use super::inner::Configuration;
     use super::*;
+
+    /// A `Configuration` initialized to the chip's power-on reset
+    /// value.
+    ///
+    /// In device-driver 2.x a fieldset's `Default` is all-zeroes; the
+    /// documented reset value is carried by the *register operation*
+    /// instead. This helper reads it back out of the generated
+    /// register operation so the tests below stay pinned to the DDSL
+    /// manifest rather than to a hand-written constant.
+    fn por_configuration() -> Configuration {
+        let mut tmp = Tmp108::new_with_a0_gnd(embedded_hal_mock::eh1::i2c::Mock::new(&[]));
+        let cfg = tmp.inner.configuration().reset_value();
+        let mut i2c = tmp.destroy();
+        i2c.done();
+        cfg
+    }
 
     #[test]
     fn default_configuration() {
-        let cfg = Configuration::new();
+        let cfg = por_configuration();
         assert_eq!(u16::from_le_bytes(cfg.into()), 0x1022);
     }
 
     #[test]
     fn modify_mode() {
-        let mut cfg = Configuration::new();
+        let mut cfg = por_configuration();
         cfg.set_m(Mode::Shutdown);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1020);
         cfg.set_m(Mode::OneShot);
@@ -1929,7 +1958,7 @@ mod tests {
 
     #[test]
     fn modify_thermostat_mode() {
-        let mut cfg = Configuration::new();
+        let mut cfg = por_configuration();
         cfg.set_tm(Thermostat::Comparator);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1022);
         cfg.set_tm(Thermostat::Interrupt);
@@ -1938,7 +1967,7 @@ mod tests {
 
     #[test]
     fn modify_watchdog_temperature_flags() {
-        let mut cfg = Configuration::new();
+        let mut cfg = por_configuration();
         cfg.set_fl(true);
         cfg.set_fh(false);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x102a);
@@ -1952,33 +1981,33 @@ mod tests {
 
     #[test]
     fn modify_conversion_rate() {
-        let mut cfg = Configuration::new();
-        cfg.set_cr(ConversionRate::_0_25Hz);
+        let mut cfg = por_configuration();
+        cfg.set_cr(ConversionRate::QuarterHz);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1002);
-        cfg.set_cr(ConversionRate::_1Hz);
+        cfg.set_cr(ConversionRate::OneHz);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1022);
-        cfg.set_cr(ConversionRate::_4Hz);
+        cfg.set_cr(ConversionRate::FourHz);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1042);
-        cfg.set_cr(ConversionRate::_16Hz);
+        cfg.set_cr(ConversionRate::SixteenHz);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1062);
     }
 
     #[test]
     fn modify_hysteresis() {
-        let mut cfg = Configuration::new();
-        cfg.set_hys(Hysteresis::_0C);
+        let mut cfg = por_configuration();
+        cfg.set_hys(Hysteresis::ZeroC);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x0022);
-        cfg.set_hys(Hysteresis::_1C);
+        cfg.set_hys(Hysteresis::OneC);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1022);
-        cfg.set_hys(Hysteresis::_2C);
+        cfg.set_hys(Hysteresis::TwoC);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x2022);
-        cfg.set_hys(Hysteresis::_4C);
+        cfg.set_hys(Hysteresis::FourC);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x3022);
     }
 
     #[test]
     fn modify_polarity() {
-        let mut cfg = Configuration::new();
+        let mut cfg = por_configuration();
         cfg.set_pol(Polarity::ActiveLow);
         assert_eq!(u16::from_ne_bytes(cfg.into()), 0x1022);
         cfg.set_pol(Polarity::ActiveHigh);
@@ -2040,14 +2069,14 @@ mod tests {
         #[test]
         fn snap_hysteresis_accepts_within_tolerance() {
             let cases: &[(f32, Hysteresis)] = &[
-                (0.0, Hysteresis::_0C),
-                (1.0, Hysteresis::_1C),
-                (2.0, Hysteresis::_2C),
-                (4.0, Hysteresis::_4C),
-                (0.04, Hysteresis::_0C),
-                (0.1_f32 + 0.9_f32, Hysteresis::_1C),
-                (1.95, Hysteresis::_2C),
-                (3.97, Hysteresis::_4C),
+                (0.0, Hysteresis::ZeroC),
+                (1.0, Hysteresis::OneC),
+                (2.0, Hysteresis::TwoC),
+                (4.0, Hysteresis::FourC),
+                (0.04, Hysteresis::ZeroC),
+                (0.1_f32 + 0.9_f32, Hysteresis::OneC),
+                (1.95, Hysteresis::TwoC),
+                (3.97, Hysteresis::FourC),
             ];
             for (input, expected) in cases {
                 assert_eq!(
@@ -2077,11 +2106,11 @@ mod tests {
             let cfg = Config {
                 thermostat_mode: Thermostat::Interrupt,
                 alert_polarity: Polarity::ActiveHigh,
-                conversion_rate: ConversionRate::_16Hz,
-                hysteresis: Hysteresis::_4C,
+                conversion_rate: ConversionRate::SixteenHz,
+                hysteresis: Hysteresis::FourC,
             };
 
-            let mut reg = Configuration::new();
+            let mut reg = por_configuration();
             ops::apply_config(&mut reg, cfg);
             assert_eq!(ops::decode_config(reg), cfg);
         }
@@ -2089,10 +2118,10 @@ mod tests {
         #[test]
         fn por_config_matches_default_configuration() {
             // ops::POR_CONFIG must match the chip's documented POR value
-            // (0x1022) and the generated Configuration field-set's
-            // default. If the device-driver TOML changes the reset value,
+            // (0x1022) and the generated configuration register's reset
+            // value. If the DDSL manifest changes the reset value,
             // probe()'s contract changes too — this test pins it.
-            let cfg = Configuration::new();
+            let cfg = por_configuration();
             assert_eq!(u16::from_le_bytes(cfg.into()), ops::POR_CONFIG);
         }
 
@@ -2190,8 +2219,8 @@ mod tests {
             let config = Config {
                 thermostat_mode: Thermostat::Interrupt,
                 alert_polarity: Polarity::ActiveHigh,
-                conversion_rate: ConversionRate::_16Hz,
-                hysteresis: Hysteresis::_4C,
+                conversion_rate: ConversionRate::SixteenHz,
+                hysteresis: Hysteresis::FourC,
             };
 
             let result = tmp108.configure(config);
@@ -2452,8 +2481,8 @@ mod tests {
             let config = Config {
                 thermostat_mode: Thermostat::Interrupt,
                 alert_polarity: Polarity::ActiveHigh,
-                conversion_rate: ConversionRate::_16Hz,
-                hysteresis: Hysteresis::_4C,
+                conversion_rate: ConversionRate::SixteenHz,
+                hysteresis: Hysteresis::FourC,
             };
 
             let result = tmp108.configure(config).await;
@@ -2773,10 +2802,10 @@ mod tests {
             // succeed and program the corresponding chip setting (no I2C
             // mismatch). Each acceptance path performs: read cfg, write cfg.
             //
-            // - 0.0 °C snaps to Hysteresis::_0C => HYS bits 0b00 => cfg word 0x0022 -> bytes [0x22, 0x00]
-            // - 1.0 °C snaps to Hysteresis::_1C => HYS bits 0b01 => cfg word 0x1022 -> bytes [0x22, 0x10]
-            // - 2.0 °C snaps to Hysteresis::_2C => HYS bits 0b10 => cfg word 0x2022 -> bytes [0x22, 0x20]
-            // - 4.0 °C snaps to Hysteresis::_4C => HYS bits 0b11 => cfg word 0x3022 -> bytes [0x22, 0x30]
+            // - 0.0 °C snaps to Hysteresis::ZeroC => HYS bits 0b00 => cfg word 0x0022 -> bytes [0x22, 0x00]
+            // - 1.0 °C snaps to Hysteresis::OneC => HYS bits 0b01 => cfg word 0x1022 -> bytes [0x22, 0x10]
+            // - 2.0 °C snaps to Hysteresis::TwoC => HYS bits 0b10 => cfg word 0x2022 -> bytes [0x22, 0x20]
+            // - 4.0 °C snaps to Hysteresis::FourC => HYS bits 0b11 => cfg word 0x3022 -> bytes [0x22, 0x30]
             //
             // For each accepted input we expect: write-read of cfg, then a
             // write of the new cfg. The chip's POR is 0x1022 (HYS=01).

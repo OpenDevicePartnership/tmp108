@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
         .configure(Config {
             thermostat_mode: Thermostat::Comparator,
             alert_polarity: Polarity::ActiveLow,
-            hysteresis: Hysteresis::_2C,
+            hysteresis: Hysteresis::TwoC,
             ..Default::default()
         })
         .await

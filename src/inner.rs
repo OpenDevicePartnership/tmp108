@@ -1,681 +1,778 @@
+// This code was generated using device-driver `2.1.0` (),
+// a tool distributed under MIT OR Apache-2.0 by Dion Dokter <dev@diondokter.nl>
+//
+// For more information about device-driver, visit the website: https://device-driver.com
+
 /// Root block of the Inner driver
 #[derive(Debug)]
 pub struct Inner<I> {
-    pub(crate) interface: I,
+    interface: I,
     #[doc(hidden)]
+    #[allow(unused)]
     base_address: u8,
 }
 impl<I> Inner<I> {
-    /// Create a new instance of the block based on device interface
+    /// Create a new instance of the device
     pub const fn new(interface: I) -> Self {
         Self {
             interface,
             base_address: 0,
         }
     }
-    /// A reference to the interface used to communicate with the device
-    pub(crate) fn interface(&mut self) -> &mut I {
-        &mut self.interface
-    }
-    /// Read all readable register values in this block from the device.
-    /// The callback is called for each of them.
-    /// Any registers in child blocks are not included.
-    ///
-    /// The callback has three arguments:
-    ///
-    /// - The address of the register
-    /// - The name of the register (with index for repeated registers)
-    /// - The read value from the register
-    ///
-    /// This is useful for e.g. debug printing all values.
-    /// The given [field_sets::FieldSetValue] has a Debug and Format implementation that forwards to the concrete type
-    /// the lies within so it can be printed without matching on it.
-    #[allow(unused_mut)]
-    #[allow(unused_variables)]
-    pub fn read_all_registers(
-        &mut self,
-        mut callback: impl FnMut(u8, &'static str, field_sets::FieldSetValue),
-    ) -> Result<(), I::Error>
-    where
-        I: ::device_driver::RegisterInterface<AddressType = u8>,
-    {
-        let reg = self.temperature().read()?;
-        callback(0 + 0 * 0, "temperature", reg.into());
-        let reg = self.configuration().read()?;
-        callback(1 + 0 * 0, "configuration", reg.into());
-        let reg = self.t_low().read()?;
-        callback(2 + 0 * 0, "t_low", reg.into());
-        let reg = self.t_high().read()?;
-        callback(3 + 0 * 0, "t_high", reg.into());
-        Ok(())
-    }
-    /// Read all readable register values in this block from the device.
-    /// The callback is called for each of them.
-    /// Any registers in child blocks are not included.
-    ///
-    /// The callback has three arguments:
-    ///
-    /// - The address of the register
-    /// - The name of the register (with index for repeated registers)
-    /// - The read value from the register
-    ///
-    /// This is useful for e.g. debug printing all values.
-    /// The given [field_sets::FieldSetValue] has a Debug and Format implementation that forwards to the concrete type
-    /// the lies within so it can be printed without matching on it.
-    #[allow(unused_mut)]
-    #[allow(unused_variables)]
-    pub async fn read_all_registers_async(
-        &mut self,
-        mut callback: impl FnMut(u8, &'static str, field_sets::FieldSetValue),
-    ) -> Result<(), I::Error>
-    where
-        I: ::device_driver::AsyncRegisterInterface<AddressType = u8>,
-    {
-        let reg = self.temperature().read_async().await?;
-        callback(0 + 0 * 0, "temperature", reg.into());
-        let reg = self.configuration().read_async().await?;
-        callback(1 + 0 * 0, "configuration", reg.into());
-        let reg = self.t_low().read_async().await?;
-        callback(2 + 0 * 0, "t_low", reg.into());
-        let reg = self.t_high().read_async().await?;
-        callback(3 + 0 * 0, "t_high", reg.into());
-        Ok(())
+    /// Drop the driver instance and reclaim the interface
+    pub fn free(self) -> I {
+        self.interface
     }
     /// Temperature register
+    ///
+    /// Register operation:
+    /// - Address: `0`
+    /// - Reset value: `0`
     pub fn temperature(
         &mut self,
-    ) -> ::device_driver::RegisterOperation<'_, I, u8, field_sets::Temperature, ::device_driver::RO> {
+    ) -> ::device_driver::RegisterOperation<'_, Self, Temperature, u8, ::device_driver::RO, ()>
+    where
+        I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
+    {
         let address = self.base_address + 0;
-        ::device_driver::RegisterOperation::<'_, I, u8, field_sets::Temperature, ::device_driver::RO>::new(
-            self.interface(),
-            address as u8,
-            field_sets::Temperature::new,
-        )
+        ::device_driver::RegisterOperation::new(self, address as u8, Temperature::default)
     }
     /// Configuration register
+    ///
+    /// Register operation:
+    /// - Address: `1`
+    /// - Reset value: `0x1022`
     pub fn configuration(
         &mut self,
-    ) -> ::device_driver::RegisterOperation<'_, I, u8, field_sets::Configuration, ::device_driver::RW> {
+    ) -> ::device_driver::RegisterOperation<'_, Self, Configuration, u8, ::device_driver::RW, ()>
+    where
+        I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
+    {
         let address = self.base_address + 1;
-        ::device_driver::RegisterOperation::<'_, I, u8, field_sets::Configuration, ::device_driver::RW>::new(
-            self.interface(),
-            address as u8,
-            field_sets::Configuration::new,
-        )
+        ::device_driver::RegisterOperation::new(self, address as u8, || Configuration::from([34, 16]))
     }
     /// Temperature low register
-    pub fn t_low(&mut self) -> ::device_driver::RegisterOperation<'_, I, u8, field_sets::TLow, ::device_driver::RW> {
+    ///
+    /// Register operation:
+    /// - Address: `2`
+    /// - Reset value: `0`
+    #[doc(alias = "t-low")]
+    pub fn t_low(&mut self) -> ::device_driver::RegisterOperation<'_, Self, TLow, u8, ::device_driver::RW, ()>
+    where
+        I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
+    {
         let address = self.base_address + 2;
-        ::device_driver::RegisterOperation::<'_, I, u8, field_sets::TLow, ::device_driver::RW>::new(
-            self.interface(),
-            address as u8,
-            field_sets::TLow::new,
-        )
+        ::device_driver::RegisterOperation::new(self, address as u8, TLow::default)
     }
     /// Temperature high register
-    pub fn t_high(&mut self) -> ::device_driver::RegisterOperation<'_, I, u8, field_sets::THigh, ::device_driver::RW> {
+    ///
+    /// Register operation:
+    /// - Address: `3`
+    /// - Reset value: `0`
+    #[doc(alias = "t-high")]
+    pub fn t_high(&mut self) -> ::device_driver::RegisterOperation<'_, Self, THigh, u8, ::device_driver::RW, ()>
+    where
+        I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
+    {
         let address = self.base_address + 3;
-        ::device_driver::RegisterOperation::<'_, I, u8, field_sets::THigh, ::device_driver::RW>::new(
-            self.interface(),
-            address as u8,
-            field_sets::THigh::new,
-        )
+        ::device_driver::RegisterOperation::new(self, address as u8, THigh::default)
     }
 }
-/// Module containing the generated fieldsets of the registers and commands
-pub mod field_sets {
-    #[allow(unused_imports)]
-    use super::*;
-    /// Temperature register
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct Temperature {
-        /// The internal bits
-        bits: [u8; 2],
+impl<I> ::device_driver::Block for Inner<I> {
+    type Interface = I;
+    type RegisterAddressType = u8;
+    type CommandAddressType = u8;
+    type BufferAddressType = u8;
+    type RegisterAddressMode = ();
+    fn interface(&mut self) -> &mut Self::Interface {
+        &mut self.interface
     }
-    impl ::device_driver::FieldSet for Temperature {
-        const SIZE_BITS: u32 = 16;
-        fn new_with_zero() -> Self {
-            Self::new_zero()
-        }
-        fn get_inner_buffer(&self) -> &[u8] {
-            &self.bits
-        }
-        fn get_inner_buffer_mut(&mut self) -> &mut [u8] {
-            &mut self.bits
-        }
+}
+#[doc(alias = "t-high")]
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct THigh {
+    #[doc(hidden)]
+    /// The internal bits
+    bits: [u8; 2],
+}
+unsafe impl ::device_driver::Fieldset for THigh {
+    const METADATA: ::device_driver::FieldsetMetadata =
+        ::device_driver::FieldsetMetadata::new().with_byte_order(::device_driver::ByteOrder::LE);
+    const ZERO: Self = Self { bits: [0; 2] };
+}
+impl THigh {}
+impl Default for THigh {
+    fn default() -> Self {
+        <Self as ::device_driver::Fieldset>::ZERO
     }
-    impl Temperature {
-        /// Create a new instance, loaded with the reset value (if any)
-        pub const fn new() -> Self {
-            Self { bits: [0, 0] }
-        }
-        /// Create a new instance, loaded with all zeroes
-        pub const fn new_zero() -> Self {
-            Self { bits: [0; 2] }
-        }
+}
+impl From<[u8; 2]> for THigh {
+    fn from(bits: [u8; 2]) -> Self {
+        Self { bits }
     }
-    impl From<[u8; 2]> for Temperature {
-        fn from(bits: [u8; 2]) -> Self {
-            Self { bits }
-        }
+}
+impl From<THigh> for [u8; 2] {
+    fn from(val: THigh) -> Self {
+        val.bits
     }
-    impl From<Temperature> for [u8; 2] {
-        fn from(val: Temperature) -> Self {
-            val.bits
-        }
+}
+impl core::fmt::Debug for THigh {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        let mut d = f.debug_struct("THigh");
+        d.finish()
     }
-    impl core::fmt::Debug for Temperature {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-            let mut d = f.debug_struct("Temperature");
-            d.finish()
-        }
+}
+impl core::ops::BitAnd for THigh {
+    type Output = Self;
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self &= rhs;
+        self
     }
-    impl core::ops::BitAnd for Temperature {
-        type Output = Self;
-        fn bitand(mut self, rhs: Self) -> Self::Output {
-            self &= rhs;
-            self
-        }
-    }
-    impl core::ops::BitAndAssign for Temperature {
-        fn bitand_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l &= *r;
-            }
+}
+impl core::ops::BitAndAssign for THigh {
+    fn bitand_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l &= *r;
         }
     }
-    impl core::ops::BitOr for Temperature {
-        type Output = Self;
-        fn bitor(mut self, rhs: Self) -> Self::Output {
-            self |= rhs;
-            self
+}
+impl core::ops::BitOr for THigh {
+    type Output = Self;
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self |= rhs;
+        self
+    }
+}
+impl core::ops::BitOrAssign for THigh {
+    fn bitor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l |= *r;
         }
     }
-    impl core::ops::BitOrAssign for Temperature {
-        fn bitor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l |= *r;
-            }
+}
+impl core::ops::BitXor for THigh {
+    type Output = Self;
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self ^= rhs;
+        self
+    }
+}
+impl core::ops::BitXorAssign for THigh {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l ^= *r;
         }
     }
-    impl core::ops::BitXor for Temperature {
-        type Output = Self;
-        fn bitxor(mut self, rhs: Self) -> Self::Output {
-            self ^= rhs;
-            self
+}
+impl core::ops::Not for THigh {
+    type Output = Self;
+    fn not(mut self) -> Self::Output {
+        for val in self.bits.iter_mut() {
+            *val = !*val;
+        }
+        self
+    }
+}
+#[doc(alias = "t-low")]
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct TLow {
+    #[doc(hidden)]
+    /// The internal bits
+    bits: [u8; 2],
+}
+unsafe impl ::device_driver::Fieldset for TLow {
+    const METADATA: ::device_driver::FieldsetMetadata =
+        ::device_driver::FieldsetMetadata::new().with_byte_order(::device_driver::ByteOrder::LE);
+    const ZERO: Self = Self { bits: [0; 2] };
+}
+impl TLow {}
+impl Default for TLow {
+    fn default() -> Self {
+        <Self as ::device_driver::Fieldset>::ZERO
+    }
+}
+impl From<[u8; 2]> for TLow {
+    fn from(bits: [u8; 2]) -> Self {
+        Self { bits }
+    }
+}
+impl From<TLow> for [u8; 2] {
+    fn from(val: TLow) -> Self {
+        val.bits
+    }
+}
+impl core::fmt::Debug for TLow {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        let mut d = f.debug_struct("TLow");
+        d.finish()
+    }
+}
+impl core::ops::BitAnd for TLow {
+    type Output = Self;
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self &= rhs;
+        self
+    }
+}
+impl core::ops::BitAndAssign for TLow {
+    fn bitand_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l &= *r;
         }
     }
-    impl core::ops::BitXorAssign for Temperature {
-        fn bitxor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l ^= *r;
-            }
+}
+impl core::ops::BitOr for TLow {
+    type Output = Self;
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self |= rhs;
+        self
+    }
+}
+impl core::ops::BitOrAssign for TLow {
+    fn bitor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l |= *r;
         }
     }
-    impl core::ops::Not for Temperature {
-        type Output = Self;
-        fn not(mut self) -> Self::Output {
-            for val in self.bits.iter_mut() {
-                *val = !*val;
-            }
-            self
+}
+impl core::ops::BitXor for TLow {
+    type Output = Self;
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self ^= rhs;
+        self
+    }
+}
+impl core::ops::BitXorAssign for TLow {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l ^= *r;
         }
     }
-    /// Configuration register
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct Configuration {
-        /// The internal bits
-        bits: [u8; 2],
+}
+impl core::ops::Not for TLow {
+    type Output = Self;
+    fn not(mut self) -> Self::Output {
+        for val in self.bits.iter_mut() {
+            *val = !*val;
+        }
+        self
     }
-    impl ::device_driver::FieldSet for Configuration {
-        const SIZE_BITS: u32 = 16;
-        fn new_with_zero() -> Self {
-            Self::new_zero()
-        }
-        fn get_inner_buffer(&self) -> &[u8] {
-            &self.bits
-        }
-        fn get_inner_buffer_mut(&mut self) -> &mut [u8] {
-            &mut self.bits
-        }
+}
+#[doc(alias = "configuration")]
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct Configuration {
+    #[doc(hidden)]
+    /// The internal bits
+    bits: [u8; 2],
+}
+unsafe impl ::device_driver::Fieldset for Configuration {
+    const METADATA: ::device_driver::FieldsetMetadata =
+        ::device_driver::FieldsetMetadata::new().with_byte_order(::device_driver::ByteOrder::LE);
+    const ZERO: Self = Self { bits: [0; 2] };
+}
+impl Configuration {
+    /// `1:0` - Read the `m` field.
+    ///
+    /// Device functional mode
+    #[must_use]
+    pub fn m(&self) -> Result<Mode, <Mode as TryFrom<u8>>::Error> {
+        let start = 0;
+        let end = 1;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        raw.try_into()
     }
-    impl Configuration {
-        /// Create a new instance, loaded with the reset value (if any)
-        pub const fn new() -> Self {
-            Self { bits: [34, 16] }
-        }
-        /// Create a new instance, loaded with all zeroes
-        pub const fn new_zero() -> Self {
-            Self { bits: [0; 2] }
-        }
-        ///Read the `m` field of the register.
-        ///
-        /// Device functional mode
-        pub fn m(&self) -> Result<super::Mode, <super::Mode as TryFrom<u8>>::Error> {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 0, 2) };
-            raw.try_into()
-        }
-        ///Read the `tm` field of the register.
-        ///
-        /// Thermostat mode
-        pub fn tm(&self) -> super::Thermostat {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 2, 3) };
-            unsafe { raw.try_into().unwrap_unchecked() }
-        }
-        ///Read the `fl` field of the register.
-        ///
-        /// Temperature watchdog low flag
-        pub fn fl(&self) -> bool {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 3, 4) };
-            raw > 0
-        }
-        ///Read the `fh` field of the register.
-        ///
-        /// Temperature watchdog high flag
-        pub fn fh(&self) -> bool {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 4, 5) };
-            raw > 0
-        }
-        ///Read the `cr` field of the register.
-        ///
-        /// Conversion rate
-        pub fn cr(&self) -> super::ConversionRate {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 5, 7) };
-            unsafe { raw.try_into().unwrap_unchecked() }
-        }
-        ///Read the `id` field of the register.
-        ///
-        /// ID
-        pub fn id(&self) -> bool {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 7, 8) };
-            raw > 0
-        }
-        ///Read the `hys` field of the register.
-        ///
-        /// Hysteresis control
-        pub fn hys(&self) -> super::Hysteresis {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 12, 14) };
-            unsafe { raw.try_into().unwrap_unchecked() }
-        }
-        ///Read the `pol` field of the register.
-        ///
-        /// ALERT pin polarity
-        pub fn pol(&self) -> super::Polarity {
-            let raw = unsafe { ::device_driver::ops::load_lsb0::<u8, ::device_driver::ops::LE>(&self.bits, 15, 16) };
-            unsafe { raw.try_into().unwrap_unchecked() }
-        }
-        ///Write the `m` field of the register.
-        ///
-        /// Device functional mode
-        pub fn set_m(&mut self, value: super::Mode) {
-            let raw = value.into();
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 0, 2, &mut self.bits) };
-        }
-        ///Write the `tm` field of the register.
-        ///
-        /// Thermostat mode
-        pub fn set_tm(&mut self, value: super::Thermostat) {
-            let raw = value.into();
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 2, 3, &mut self.bits) };
-        }
-        ///Write the `fl` field of the register.
-        ///
-        /// Temperature watchdog low flag
-        pub fn set_fl(&mut self, value: bool) {
-            let raw = value as _;
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 3, 4, &mut self.bits) };
-        }
-        ///Write the `fh` field of the register.
-        ///
-        /// Temperature watchdog high flag
-        pub fn set_fh(&mut self, value: bool) {
-            let raw = value as _;
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 4, 5, &mut self.bits) };
-        }
-        ///Write the `cr` field of the register.
-        ///
-        /// Conversion rate
-        pub fn set_cr(&mut self, value: super::ConversionRate) {
-            let raw = value.into();
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 5, 7, &mut self.bits) };
-        }
-        ///Write the `id` field of the register.
-        ///
-        /// ID
-        pub fn set_id(&mut self, value: bool) {
-            let raw = value as _;
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 7, 8, &mut self.bits) };
-        }
-        ///Write the `hys` field of the register.
-        ///
-        /// Hysteresis control
-        pub fn set_hys(&mut self, value: super::Hysteresis) {
-            let raw = value.into();
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 12, 14, &mut self.bits) };
-        }
-        ///Write the `pol` field of the register.
-        ///
-        /// ALERT pin polarity
-        pub fn set_pol(&mut self, value: super::Polarity) {
-            let raw = value.into();
-            unsafe { ::device_driver::ops::store_lsb0::<u8, ::device_driver::ops::LE>(raw, 15, 16, &mut self.bits) };
-        }
+    /// `bit 2` - Read the `tm` field.
+    ///
+    /// Thermostat mode
+    #[must_use]
+    pub fn tm(&self) -> Thermostat {
+        let start = 2;
+        let end = 2;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        unsafe { raw.try_into().unwrap_unchecked() }
     }
-    impl From<[u8; 2]> for Configuration {
-        fn from(bits: [u8; 2]) -> Self {
-            Self { bits }
-        }
+    /// `bit 3` - Read the `fl` field.
+    ///
+    /// Temperature watchdog low flag
+    #[must_use]
+    pub fn fl(&self) -> bool {
+        let start = 3;
+        let end = 3;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        raw > 0
     }
-    impl From<Configuration> for [u8; 2] {
-        fn from(val: Configuration) -> Self {
-            val.bits
-        }
+    /// `bit 4` - Read the `fh` field.
+    ///
+    /// Temperature watchdog high flag
+    #[must_use]
+    pub fn fh(&self) -> bool {
+        let start = 4;
+        let end = 4;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        raw > 0
     }
-    impl core::fmt::Debug for Configuration {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-            let mut d = f.debug_struct("Configuration");
-            d.field("m", &self.m());
-            d.field("tm", &self.tm());
-            d.field("fl", &self.fl());
-            d.field("fh", &self.fh());
-            d.field("cr", &self.cr());
-            d.field("id", &self.id());
-            d.field("hys", &self.hys());
-            d.field("pol", &self.pol());
-            d.finish()
-        }
+    /// `6:5` - Read the `cr` field.
+    ///
+    /// Conversion rate
+    #[must_use]
+    pub fn cr(&self) -> ConversionRate {
+        let start = 5;
+        let end = 6;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        unsafe { raw.try_into().unwrap_unchecked() }
     }
-    impl core::ops::BitAnd for Configuration {
-        type Output = Self;
-        fn bitand(mut self, rhs: Self) -> Self::Output {
-            self &= rhs;
-            self
-        }
+    /// `bit 7` - Read the `id` field.
+    ///
+    /// ID
+    #[must_use]
+    pub fn id(&self) -> bool {
+        let start = 7;
+        let end = 7;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        raw > 0
     }
-    impl core::ops::BitAndAssign for Configuration {
-        fn bitand_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l &= *r;
-            }
-        }
+    /// `13:12` - Read the `hys` field.
+    ///
+    /// Hysteresis control
+    #[must_use]
+    pub fn hys(&self) -> Hysteresis {
+        let start = 12;
+        let end = 13;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        unsafe { raw.try_into().unwrap_unchecked() }
     }
-    impl core::ops::BitOr for Configuration {
-        type Output = Self;
-        fn bitor(mut self, rhs: Self) -> Self::Output {
-            self |= rhs;
-            self
-        }
+    /// `bit 15` - Read the `pol` field.
+    ///
+    /// ALERT pin polarity
+    #[must_use]
+    pub fn pol(&self) -> Polarity {
+        let start = 15;
+        let end = 15;
+        let raw = unsafe { ::device_driver::ops::load::<u8, ::device_driver::ops::LE>(&self.bits, start, end) };
+        unsafe { raw.try_into().unwrap_unchecked() }
     }
-    impl core::ops::BitOrAssign for Configuration {
-        fn bitor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l |= *r;
-            }
-        }
+    /// `1:0` - Set the `m` field.
+    ///
+    /// Device functional mode
+    pub fn set_m(&mut self, value: Mode) {
+        let start = 0;
+        let end = 1;
+        let raw = value.into();
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
     }
-    impl core::ops::BitXor for Configuration {
-        type Output = Self;
-        fn bitxor(mut self, rhs: Self) -> Self::Output {
-            self ^= rhs;
-            self
-        }
+    /// `bit 2` - Set the `tm` field.
+    ///
+    /// Thermostat mode
+    pub fn set_tm(&mut self, value: Thermostat) {
+        let start = 2;
+        let end = 2;
+        let raw = value.into();
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
     }
-    impl core::ops::BitXorAssign for Configuration {
-        fn bitxor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l ^= *r;
-            }
-        }
+    /// `bit 3` - Set the `fl` field.
+    ///
+    /// Temperature watchdog low flag
+    pub fn set_fl(&mut self, value: bool) {
+        let start = 3;
+        let end = 3;
+        let raw = value as _;
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
     }
-    impl core::ops::Not for Configuration {
-        type Output = Self;
-        fn not(mut self) -> Self::Output {
-            for val in self.bits.iter_mut() {
-                *val = !*val;
-            }
-            self
-        }
+    /// `bit 4` - Set the `fh` field.
+    ///
+    /// Temperature watchdog high flag
+    pub fn set_fh(&mut self, value: bool) {
+        let start = 4;
+        let end = 4;
+        let raw = value as _;
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
     }
-    /// Temperature low register
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct TLow {
-        /// The internal bits
-        bits: [u8; 2],
+    /// `6:5` - Set the `cr` field.
+    ///
+    /// Conversion rate
+    pub fn set_cr(&mut self, value: ConversionRate) {
+        let start = 5;
+        let end = 6;
+        let raw = value.into();
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
     }
-    impl ::device_driver::FieldSet for TLow {
-        const SIZE_BITS: u32 = 16;
-        fn new_with_zero() -> Self {
-            Self::new_zero()
-        }
-        fn get_inner_buffer(&self) -> &[u8] {
-            &self.bits
-        }
-        fn get_inner_buffer_mut(&mut self) -> &mut [u8] {
-            &mut self.bits
+    /// `bit 7` - Set the `id` field.
+    ///
+    /// ID
+    pub fn set_id(&mut self, value: bool) {
+        let start = 7;
+        let end = 7;
+        let raw = value as _;
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
+    }
+    /// `13:12` - Set the `hys` field.
+    ///
+    /// Hysteresis control
+    pub fn set_hys(&mut self, value: Hysteresis) {
+        let start = 12;
+        let end = 13;
+        let raw = value.into();
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
+    }
+    /// `bit 15` - Set the `pol` field.
+    ///
+    /// ALERT pin polarity
+    pub fn set_pol(&mut self, value: Polarity) {
+        let start = 15;
+        let end = 15;
+        let raw = value.into();
+        unsafe { ::device_driver::ops::store::<u8, ::device_driver::ops::LE>(raw, start, end, &mut self.bits) };
+    }
+}
+impl Default for Configuration {
+    fn default() -> Self {
+        <Self as ::device_driver::Fieldset>::ZERO
+    }
+}
+impl From<[u8; 2]> for Configuration {
+    fn from(bits: [u8; 2]) -> Self {
+        Self { bits }
+    }
+}
+impl From<Configuration> for [u8; 2] {
+    fn from(val: Configuration) -> Self {
+        val.bits
+    }
+}
+impl core::fmt::Debug for Configuration {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        let mut d = f.debug_struct("Configuration");
+        d.field("m", &self.m());
+        d.field("tm", &self.tm());
+        d.field("fl", &self.fl());
+        d.field("fh", &self.fh());
+        d.field("cr", &self.cr());
+        d.field("id", &self.id());
+        d.field("hys", &self.hys());
+        d.field("pol", &self.pol());
+        d.finish()
+    }
+}
+impl core::ops::BitAnd for Configuration {
+    type Output = Self;
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self &= rhs;
+        self
+    }
+}
+impl core::ops::BitAndAssign for Configuration {
+    fn bitand_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l &= *r;
         }
     }
-    impl TLow {
-        /// Create a new instance, loaded with the reset value (if any)
-        pub const fn new() -> Self {
-            Self { bits: [0, 0] }
-        }
-        /// Create a new instance, loaded with all zeroes
-        pub const fn new_zero() -> Self {
-            Self { bits: [0; 2] }
+}
+impl core::ops::BitOr for Configuration {
+    type Output = Self;
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self |= rhs;
+        self
+    }
+}
+impl core::ops::BitOrAssign for Configuration {
+    fn bitor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l |= *r;
         }
     }
-    impl From<[u8; 2]> for TLow {
-        fn from(bits: [u8; 2]) -> Self {
-            Self { bits }
+}
+impl core::ops::BitXor for Configuration {
+    type Output = Self;
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self ^= rhs;
+        self
+    }
+}
+impl core::ops::BitXorAssign for Configuration {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l ^= *r;
         }
     }
-    impl From<TLow> for [u8; 2] {
-        fn from(val: TLow) -> Self {
-            val.bits
+}
+impl core::ops::Not for Configuration {
+    type Output = Self;
+    fn not(mut self) -> Self::Output {
+        for val in self.bits.iter_mut() {
+            *val = !*val;
+        }
+        self
+    }
+}
+#[doc(alias = "temperature")]
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct Temperature {
+    #[doc(hidden)]
+    /// The internal bits
+    bits: [u8; 2],
+}
+unsafe impl ::device_driver::Fieldset for Temperature {
+    const METADATA: ::device_driver::FieldsetMetadata =
+        ::device_driver::FieldsetMetadata::new().with_byte_order(::device_driver::ByteOrder::LE);
+    const ZERO: Self = Self { bits: [0; 2] };
+}
+impl Temperature {}
+impl Default for Temperature {
+    fn default() -> Self {
+        <Self as ::device_driver::Fieldset>::ZERO
+    }
+}
+impl From<[u8; 2]> for Temperature {
+    fn from(bits: [u8; 2]) -> Self {
+        Self { bits }
+    }
+}
+impl From<Temperature> for [u8; 2] {
+    fn from(val: Temperature) -> Self {
+        val.bits
+    }
+}
+impl core::fmt::Debug for Temperature {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        let mut d = f.debug_struct("Temperature");
+        d.finish()
+    }
+}
+impl core::ops::BitAnd for Temperature {
+    type Output = Self;
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self &= rhs;
+        self
+    }
+}
+impl core::ops::BitAndAssign for Temperature {
+    fn bitand_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l &= *r;
         }
     }
-    impl core::fmt::Debug for TLow {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-            let mut d = f.debug_struct("TLow");
-            d.finish()
+}
+impl core::ops::BitOr for Temperature {
+    type Output = Self;
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self |= rhs;
+        self
+    }
+}
+impl core::ops::BitOrAssign for Temperature {
+    fn bitor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l |= *r;
         }
     }
-    impl core::ops::BitAnd for TLow {
-        type Output = Self;
-        fn bitand(mut self, rhs: Self) -> Self::Output {
-            self &= rhs;
-            self
+}
+impl core::ops::BitXor for Temperature {
+    type Output = Self;
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self ^= rhs;
+        self
+    }
+}
+impl core::ops::BitXorAssign for Temperature {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
+            *l ^= *r;
         }
     }
-    impl core::ops::BitAndAssign for TLow {
-        fn bitand_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l &= *r;
-            }
+}
+impl core::ops::Not for Temperature {
+    type Output = Self;
+    fn not(mut self) -> Self::Output {
+        for val in self.bits.iter_mut() {
+            *val = !*val;
+        }
+        self
+    }
+}
+/// ALERT pin polarity
+#[doc(alias = "polarity")]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum Polarity {
+    #[doc(alias = "active-low")]
+    ActiveLow = 0,
+    #[doc(alias = "active-high")]
+    ActiveHigh = 1,
+}
+impl core::convert::TryFrom<u8> for Polarity {
+    type Error = ::device_driver::ConversionError<u8>;
+    fn try_from(val: u8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Self::ActiveLow),
+            1 => Ok(Self::ActiveHigh),
+            val => Err(::device_driver::ConversionError {
+                source: val,
+                target: "Polarity",
+            }),
         }
     }
-    impl core::ops::BitOr for TLow {
-        type Output = Self;
-        fn bitor(mut self, rhs: Self) -> Self::Output {
-            self |= rhs;
-            self
+}
+impl From<Polarity> for u8 {
+    fn from(val: Polarity) -> Self {
+        match val {
+            Polarity::ActiveLow => 0,
+            Polarity::ActiveHigh => 1,
         }
     }
-    impl core::ops::BitOrAssign for TLow {
-        fn bitor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l |= *r;
-            }
+}
+#[doc(hidden)]
+impl ::device_driver::EnumIndex for Polarity {
+    #[track_caller]
+    fn index(&self) -> i32 {
+        let index = u8::from(*self);
+        index.try_into().unwrap()
+    }
+}
+/// Temperature hysteresis
+#[doc(alias = "hysteresis")]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum Hysteresis {
+    #[doc(alias = "zero-c")]
+    ZeroC = 0,
+    #[doc(alias = "one-c")]
+    OneC = 1,
+    #[doc(alias = "two-c")]
+    TwoC = 2,
+    #[doc(alias = "four-c")]
+    FourC = 3,
+}
+impl core::convert::TryFrom<u8> for Hysteresis {
+    type Error = ::device_driver::ConversionError<u8>;
+    fn try_from(val: u8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Self::ZeroC),
+            1 => Ok(Self::OneC),
+            2 => Ok(Self::TwoC),
+            3 => Ok(Self::FourC),
+            val => Err(::device_driver::ConversionError {
+                source: val,
+                target: "Hysteresis",
+            }),
         }
     }
-    impl core::ops::BitXor for TLow {
-        type Output = Self;
-        fn bitxor(mut self, rhs: Self) -> Self::Output {
-            self ^= rhs;
-            self
+}
+impl From<Hysteresis> for u8 {
+    fn from(val: Hysteresis) -> Self {
+        match val {
+            Hysteresis::ZeroC => 0,
+            Hysteresis::OneC => 1,
+            Hysteresis::TwoC => 2,
+            Hysteresis::FourC => 3,
         }
     }
-    impl core::ops::BitXorAssign for TLow {
-        fn bitxor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l ^= *r;
-            }
+}
+#[doc(hidden)]
+impl ::device_driver::EnumIndex for Hysteresis {
+    #[track_caller]
+    fn index(&self) -> i32 {
+        let index = u8::from(*self);
+        index.try_into().unwrap()
+    }
+}
+/// Conversion rate
+#[doc(alias = "conversion-rate")]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum ConversionRate {
+    #[doc(alias = "quarter-hz")]
+    QuarterHz = 0,
+    #[doc(alias = "one-hz")]
+    OneHz = 1,
+    #[doc(alias = "four-hz")]
+    FourHz = 2,
+    #[doc(alias = "sixteen-hz")]
+    SixteenHz = 3,
+}
+impl core::convert::TryFrom<u8> for ConversionRate {
+    type Error = ::device_driver::ConversionError<u8>;
+    fn try_from(val: u8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Self::QuarterHz),
+            1 => Ok(Self::OneHz),
+            2 => Ok(Self::FourHz),
+            3 => Ok(Self::SixteenHz),
+            val => Err(::device_driver::ConversionError {
+                source: val,
+                target: "ConversionRate",
+            }),
         }
     }
-    impl core::ops::Not for TLow {
-        type Output = Self;
-        fn not(mut self) -> Self::Output {
-            for val in self.bits.iter_mut() {
-                *val = !*val;
-            }
-            self
+}
+impl From<ConversionRate> for u8 {
+    fn from(val: ConversionRate) -> Self {
+        match val {
+            ConversionRate::QuarterHz => 0,
+            ConversionRate::OneHz => 1,
+            ConversionRate::FourHz => 2,
+            ConversionRate::SixteenHz => 3,
         }
     }
-    /// Temperature high register
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    pub struct THigh {
-        /// The internal bits
-        bits: [u8; 2],
+}
+#[doc(hidden)]
+impl ::device_driver::EnumIndex for ConversionRate {
+    #[track_caller]
+    fn index(&self) -> i32 {
+        let index = u8::from(*self);
+        index.try_into().unwrap()
     }
-    impl ::device_driver::FieldSet for THigh {
-        const SIZE_BITS: u32 = 16;
-        fn new_with_zero() -> Self {
-            Self::new_zero()
-        }
-        fn get_inner_buffer(&self) -> &[u8] {
-            &self.bits
-        }
-        fn get_inner_buffer_mut(&mut self) -> &mut [u8] {
-            &mut self.bits
-        }
-    }
-    impl THigh {
-        /// Create a new instance, loaded with the reset value (if any)
-        pub const fn new() -> Self {
-            Self { bits: [0, 0] }
-        }
-        /// Create a new instance, loaded with all zeroes
-        pub const fn new_zero() -> Self {
-            Self { bits: [0; 2] }
-        }
-    }
-    impl From<[u8; 2]> for THigh {
-        fn from(bits: [u8; 2]) -> Self {
-            Self { bits }
+}
+/// Thermostat mode
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum Thermostat {
+    #[doc(alias = "comparator")]
+    Comparator = 0,
+    #[doc(alias = "interrupt")]
+    Interrupt = 1,
+}
+impl core::convert::TryFrom<u8> for Thermostat {
+    type Error = ::device_driver::ConversionError<u8>;
+    fn try_from(val: u8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Self::Comparator),
+            1 => Ok(Self::Interrupt),
+            val => Err(::device_driver::ConversionError {
+                source: val,
+                target: "Thermostat",
+            }),
         }
     }
-    impl From<THigh> for [u8; 2] {
-        fn from(val: THigh) -> Self {
-            val.bits
+}
+impl From<Thermostat> for u8 {
+    fn from(val: Thermostat) -> Self {
+        match val {
+            Thermostat::Comparator => 0,
+            Thermostat::Interrupt => 1,
         }
     }
-    impl core::fmt::Debug for THigh {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-            let mut d = f.debug_struct("THigh");
-            d.finish()
-        }
-    }
-    impl core::ops::BitAnd for THigh {
-        type Output = Self;
-        fn bitand(mut self, rhs: Self) -> Self::Output {
-            self &= rhs;
-            self
-        }
-    }
-    impl core::ops::BitAndAssign for THigh {
-        fn bitand_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l &= *r;
-            }
-        }
-    }
-    impl core::ops::BitOr for THigh {
-        type Output = Self;
-        fn bitor(mut self, rhs: Self) -> Self::Output {
-            self |= rhs;
-            self
-        }
-    }
-    impl core::ops::BitOrAssign for THigh {
-        fn bitor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l |= *r;
-            }
-        }
-    }
-    impl core::ops::BitXor for THigh {
-        type Output = Self;
-        fn bitxor(mut self, rhs: Self) -> Self::Output {
-            self ^= rhs;
-            self
-        }
-    }
-    impl core::ops::BitXorAssign for THigh {
-        fn bitxor_assign(&mut self, rhs: Self) {
-            for (l, r) in self.bits.iter_mut().zip(&rhs.bits) {
-                *l ^= *r;
-            }
-        }
-    }
-    impl core::ops::Not for THigh {
-        type Output = Self;
-        fn not(mut self) -> Self::Output {
-            for val in self.bits.iter_mut() {
-                *val = !*val;
-            }
-            self
-        }
-    }
-    /// Enum containing all possible field set types
-    pub enum FieldSetValue {
-        /// Temperature register
-        Temperature(Temperature),
-        /// Configuration register
-        Configuration(Configuration),
-        /// Temperature low register
-        TLow(TLow),
-        /// Temperature high register
-        THigh(THigh),
-    }
-    impl core::fmt::Debug for FieldSetValue {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            match self {
-                Self::Temperature(val) => core::fmt::Debug::fmt(val, f),
-                Self::Configuration(val) => core::fmt::Debug::fmt(val, f),
-                Self::TLow(val) => core::fmt::Debug::fmt(val, f),
-                Self::THigh(val) => core::fmt::Debug::fmt(val, f),
-                #[allow(unreachable_patterns)]
-                _ => unreachable!(),
-            }
-        }
-    }
-    impl From<Temperature> for FieldSetValue {
-        fn from(val: Temperature) -> Self {
-            Self::Temperature(val)
-        }
-    }
-    impl From<Configuration> for FieldSetValue {
-        fn from(val: Configuration) -> Self {
-            Self::Configuration(val)
-        }
-    }
-    impl From<TLow> for FieldSetValue {
-        fn from(val: TLow) -> Self {
-            Self::TLow(val)
-        }
-    }
-    impl From<THigh> for FieldSetValue {
-        fn from(val: THigh) -> Self {
-            Self::THigh(val)
-        }
+}
+#[doc(hidden)]
+impl ::device_driver::EnumIndex for Thermostat {
+    #[track_caller]
+    fn index(&self) -> i32 {
+        let index = u8::from(*self);
+        index.try_into().unwrap()
     }
 }
 /// Device functional mode
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Mode {
+    #[doc(alias = "shutdown")]
     Shutdown = 0,
+    #[doc(alias = "one-shot")]
     OneShot = 1,
+    #[doc(alias = "continuous")]
     Continuous = 2,
 }
 impl core::convert::TryFrom<u8> for Mode {
@@ -701,125 +798,11 @@ impl From<Mode> for u8 {
         }
     }
 }
-/// Thermostat mode
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Thermostat {
-    Comparator = 0,
-    Interrupt = 1,
-}
-impl core::convert::TryFrom<u8> for Thermostat {
-    type Error = ::device_driver::ConversionError<u8>;
-    fn try_from(val: u8) -> Result<Self, Self::Error> {
-        match val {
-            0 => Ok(Self::Comparator),
-            1 => Ok(Self::Interrupt),
-            val => Err(::device_driver::ConversionError {
-                source: val,
-                target: "Thermostat",
-            }),
-        }
-    }
-}
-impl From<Thermostat> for u8 {
-    fn from(val: Thermostat) -> Self {
-        match val {
-            Thermostat::Comparator => 0,
-            Thermostat::Interrupt => 1,
-        }
-    }
-}
-/// Conversion rate
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum ConversionRate {
-    _0_25Hz = 0,
-    _1Hz = 1,
-    _4Hz = 2,
-    _16Hz = 3,
-}
-impl core::convert::TryFrom<u8> for ConversionRate {
-    type Error = ::device_driver::ConversionError<u8>;
-    fn try_from(val: u8) -> Result<Self, Self::Error> {
-        match val {
-            0 => Ok(Self::_0_25Hz),
-            1 => Ok(Self::_1Hz),
-            2 => Ok(Self::_4Hz),
-            3 => Ok(Self::_16Hz),
-            val => Err(::device_driver::ConversionError {
-                source: val,
-                target: "ConversionRate",
-            }),
-        }
-    }
-}
-impl From<ConversionRate> for u8 {
-    fn from(val: ConversionRate) -> Self {
-        match val {
-            ConversionRate::_0_25Hz => 0,
-            ConversionRate::_1Hz => 1,
-            ConversionRate::_4Hz => 2,
-            ConversionRate::_16Hz => 3,
-        }
-    }
-}
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Hysteresis {
-    _0C = 0,
-    _1C = 1,
-    _2C = 2,
-    _4C = 3,
-}
-impl core::convert::TryFrom<u8> for Hysteresis {
-    type Error = ::device_driver::ConversionError<u8>;
-    fn try_from(val: u8) -> Result<Self, Self::Error> {
-        match val {
-            0 => Ok(Self::_0C),
-            1 => Ok(Self::_1C),
-            2 => Ok(Self::_2C),
-            3 => Ok(Self::_4C),
-            val => Err(::device_driver::ConversionError {
-                source: val,
-                target: "Hysteresis",
-            }),
-        }
-    }
-}
-impl From<Hysteresis> for u8 {
-    fn from(val: Hysteresis) -> Self {
-        match val {
-            Hysteresis::_0C => 0,
-            Hysteresis::_1C => 1,
-            Hysteresis::_2C => 2,
-            Hysteresis::_4C => 3,
-        }
-    }
-}
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Polarity {
-    ActiveLow = 0,
-    ActiveHigh = 1,
-}
-impl core::convert::TryFrom<u8> for Polarity {
-    type Error = ::device_driver::ConversionError<u8>;
-    fn try_from(val: u8) -> Result<Self, Self::Error> {
-        match val {
-            0 => Ok(Self::ActiveLow),
-            1 => Ok(Self::ActiveHigh),
-            val => Err(::device_driver::ConversionError {
-                source: val,
-                target: "Polarity",
-            }),
-        }
-    }
-}
-impl From<Polarity> for u8 {
-    fn from(val: Polarity) -> Self {
-        match val {
-            Polarity::ActiveLow => 0,
-            Polarity::ActiveHigh => 1,
-        }
+#[doc(hidden)]
+impl ::device_driver::EnumIndex for Mode {
+    #[track_caller]
+    fn index(&self) -> i32 {
+        let index = u8::from(*self);
+        index.try_into().unwrap()
     }
 }

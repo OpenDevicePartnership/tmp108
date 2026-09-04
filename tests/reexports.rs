@@ -7,8 +7,8 @@ fn config_with_explicit_fields_compiles() {
     let cfg = Config {
         thermostat_mode: Thermostat::Interrupt,
         alert_polarity: Polarity::ActiveHigh,
-        conversion_rate: ConversionRate::_16Hz,
-        hysteresis: Hysteresis::_4C,
+        conversion_rate: ConversionRate::SixteenHz,
+        hysteresis: Hysteresis::FourC,
     };
     // Avoid unused-binding warning; the assertion is on compilation.
     let _ = cfg;

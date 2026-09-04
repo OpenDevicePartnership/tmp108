@@ -1,0 +1,87 @@
+device Inner {
+    default-byte-order: LE,
+    register-address-type: u8,
+    word-boundaries: "-_",
+    default-access: RW,
+
+    /// Temperature register
+    register temperature {
+        address: 0,
+        access: RO,
+        fields: fieldset _ {
+            size-bytes: 2,
+        },
+    },
+
+    /// Configuration register
+    register configuration {
+        address: 1,
+        reset: 0x1022,
+        fields: fieldset _ {
+            size-bytes: 2,
+
+            /// Device functional mode
+            field m 1:0 -> _ as try
+                /// Device functional mode
+                enum Mode {
+                    shutdown: 0,
+                    one-shot: 1,
+                    continuous: 2,
+                },
+            /// Thermostat mode
+            field tm 2 -> _ as
+                /// Thermostat mode
+                enum Thermostat {
+                    comparator: 0,
+                    interrupt: 1,
+                },
+            /// Temperature watchdog low flag
+            field fl 3,
+            /// Temperature watchdog high flag
+            field fh 4,
+            /// Conversion rate
+            field cr 6:5 -> _ as
+                /// Conversion rate
+                enum conversion-rate {
+                    quarter-hz: 0,
+                    one-hz: 1,
+                    four-hz: 2,
+                    sixteen-hz: 3,
+                },
+            /// ID
+            field id 7,
+            /// Hysteresis control
+            field hys 13:12 -> _ as
+                /// Temperature hysteresis
+                enum hysteresis {
+                    zero-c: 0,
+                    one-c: 1,
+                    two-c: 2,
+                    four-c: 3,
+                },
+            /// ALERT pin polarity
+            field pol 15 -> _ as
+                /// ALERT pin polarity
+                enum polarity {
+                    active-low: 0,
+                    active-high: 1,
+                },
+        },
+    },
+
+    /// Temperature low register
+    register t-low {
+        address: 2,
+        fields: fieldset _ {
+            size-bytes: 2,
+        },
+    },
+
+    /// Temperature high register
+    register t-high {
+        address: 3,
+        fields: fieldset _ {
+            size-bytes: 2,
+        },
+    },
+}
