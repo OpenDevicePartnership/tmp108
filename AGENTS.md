@@ -33,7 +33,7 @@ Public driver types:
   Gated by `cfg(feature = "embedded-sensors-hal-async")`. Access the
   inner sensor via `sensor()` / `sensor_mut()` / `into_inner()`.
 
-Since 0.7.0 both `Tmp108` and `AsyncTmp108` are available
+Since 0.6.0 both `Tmp108` and `AsyncTmp108` are available
 simultaneously when both features are enabled. The shared
 sync/async-agnostic register codec lives in a private `mod ops`; the
 two driver types are thin shells that perform I²C and delegate the
@@ -100,7 +100,7 @@ meaningful work to `ops::*`.
 | (none) | blocking `Tmp108` over `embedded-hal` | — |
 | `async` | async `AsyncTmp108` over `embedded-hal-async`; unlocks `AsyncTmp108::continuous` | — |
 | `embedded-sensors-hal` | blocking `TemperatureSensor` trait impl on `Tmp108` | — |
-| `embedded-sensors-hal-async` | async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` on `AsyncTmp108`; `AlertTmp108` wrapper | **`async`** (forced in Cargo.toml since 0.7.0) |
+| `embedded-sensors-hal-async` | async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` on `AsyncTmp108`; `AlertTmp108` wrapper | **`async`** (forced in Cargo.toml since 0.6.0) |
 
 Things that follow from the matrix and trip up new contributors:
 
@@ -113,7 +113,7 @@ Things that follow from the matrix and trip up new contributors:
   There is **no blocking equivalent**. The README's "Gotchas" section
   documents the workaround.
 - `cargo hack --feature-powerset check --locked` enumerates every legal
-  combination (6 since 0.7.0, down from 8 because `embedded-sensors-hal-async`
+  combination (6 since 0.6.0, down from 8 because `embedded-sensors-hal-async`
   now implies `async`). All combos must stay green. Use it before pushing.
 
 ---
@@ -211,7 +211,7 @@ flows from there.
 
 ### 3. Two parallel driver types share a private `mod ops`
 
-Since 0.7.0 the driver is implemented as two named types:
+Since 0.6.0 the driver is implemented as two named types:
 
 - `pub struct Tmp108<I2C: embedded_hal::i2c::I2c>` — always available.
 - `pub struct AsyncTmp108<I2C: embedded_hal_async::i2c::I2c>` —

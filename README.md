@@ -103,7 +103,7 @@ See `examples/` for complete, runnable versions of each snippet (and more).
 | `embedded-sensors-hal` | Blocking `TemperatureSensor` impl on `Tmp108`. | — |
 | `embedded-sensors-hal-async` | Async `TemperatureSensor`, `TemperatureThresholdSet`, `TemperatureHysteresis` impls on `AsyncTmp108`, plus the `AlertTmp108` wrapper with `TemperatureThresholdWait`. | `async` |
 
-Since 0.7.0 both `Tmp108` (blocking) and `AsyncTmp108` (async) are
+Since 0.6.0 both `Tmp108` (blocking) and `AsyncTmp108` (async) are
 available simultaneously when both relevant features are enabled.
 
 ## Gotchas
