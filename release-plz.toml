@@ -1,0 +1,35 @@
+# Release-plz configuration.
+#
+# Docs: https://release-plz.dev/docs/config
+
+[workspace]
+# Keep the release PR obviously distinguishable in the PR list.
+pr_labels = ["release"]
+
+# Only publish when the release PR is merged, rather than on every push to
+# main. Without this, a crate is published the moment a commit lands.
+release_always = false
+
+[changelog]
+# `commit_parsers` below skip `chore` and `ci` commits, but a breaking change
+# must never be silently dropped from the changelog.
+protect_breaking_commits = true
+
+# The default parser groups everything except `feat` and `fix` under "Other",
+# which buried a breaking `refactor!` commit. These map the conventional commit
+# types this repository actually uses.
+#
+# Group names carry an HTML comment prefix purely to force ordering: git-cliff
+# sorts groups alphabetically, and the comment is invisible once rendered.
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^fix", group = "<!-- 1 -->Fixed" },
+  { message = "^refactor", group = "<!-- 2 -->Changed" },
+  { message = "^perf", group = "<!-- 3 -->Performance" },
+  { message = "^build", group = "<!-- 4 -->Build system" },
+  { message = "^test", group = "<!-- 5 -->Testing" },
+  { message = "^docs", group = "<!-- 6 -->Documentation" },
+  { message = "^chore", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^.*", group = "<!-- 7 -->Other" },
+]
