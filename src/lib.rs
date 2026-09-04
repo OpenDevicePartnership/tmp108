@@ -2388,6 +2388,195 @@ mod tests {
             assert_eq!(ops::decode_config(reg), cfg);
         }
 
+        /// Exhaustive tests for the `Config` <-> configuration-register
+        /// codec.
+        ///
+        /// Every domain here is small enough to walk in full: `Config`
+        /// has 64 inhabitants (1 + 1 + 2 + 2 bits) and the register is
+        /// a single 16-bit word, so 65,536 covers every bit pattern the
+        /// part could ever hand back. Nothing is sampled.
+        mod config_bits {
+            use super::*;
+
+            /// Every `Thermostat`, in encoding order.
+            const THERMOSTATS: [Thermostat; 2] = [Thermostat::Comparator, Thermostat::Interrupt];
+
+            /// Every `Polarity`, in encoding order.
+            const POLARITIES: [Polarity; 2] = [Polarity::ActiveLow, Polarity::ActiveHigh];
+
+            /// Every `ConversionRate`, in encoding order.
+            const CONVERSION_RATES: [ConversionRate; 4] = [
+                ConversionRate::QuarterHz,
+                ConversionRate::OneHz,
+                ConversionRate::FourHz,
+                ConversionRate::SixteenHz,
+            ];
+
+            /// Every `Hysteresis`, in encoding order.
+            const HYSTERESES: [Hysteresis; 4] =
+                [Hysteresis::ZeroC, Hysteresis::OneC, Hysteresis::TwoC, Hysteresis::FourC];
+
+            /// The number of `Config` inhabitants the four modelled
+            /// fields admit: 2 * 2 * 4 * 4.
+            const CONFIG_INHABITANTS: usize = 64;
+
+            /// Bits of the configuration register that `Config` models:
+            /// `tm` (bit 2), `cr` (6:5), `hys` (13:12) and `pol` (bit
+            /// 15). Everything else — `m` (1:0), `fl` (bit 3), `fh`
+            /// (bit 4), `id` (bit 7) and the reserved bits 11:8 and 14
+            /// — must survive `apply_config` untouched.
+            const MODELLED_MASK: u16 = 0b1011_0000_0110_0100;
+
+            /// The `m` field, 1:0. Encoding 3 is reserved.
+            const MODE_MASK: u16 = 0b11;
+
+            /// The reserved `m` encoding: three variants in two bits.
+            const RESERVED_MODE: u16 = 3;
+
+            /// The 64 `Config` values, applied to `f` one at a time.
+            ///
+            /// Returns how many it produced so callers can pin the
+            /// count.
+            fn for_each_config(mut f: impl FnMut(Config)) -> usize {
+                let mut count = 0;
+                for thermostat_mode in THERMOSTATS {
+                    for alert_polarity in POLARITIES {
+                        for conversion_rate in CONVERSION_RATES {
+                            for hysteresis in HYSTERESES {
+                                f(Config {
+                                    thermostat_mode,
+                                    alert_polarity,
+                                    conversion_rate,
+                                    hysteresis,
+                                });
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+                count
+            }
+
+            /// A `Config` with all four modelled fields at their lowest
+            /// encoding — every modelled bit clear.
+            const fn all_min() -> Config {
+                Config {
+                    thermostat_mode: Thermostat::Comparator,
+                    alert_polarity: Polarity::ActiveLow,
+                    conversion_rate: ConversionRate::QuarterHz,
+                    hysteresis: Hysteresis::ZeroC,
+                }
+            }
+
+            /// A `Config` with all four modelled fields at their highest
+            /// encoding — every modelled bit set.
+            const fn all_max() -> Config {
+                Config {
+                    thermostat_mode: Thermostat::Interrupt,
+                    alert_polarity: Polarity::ActiveHigh,
+                    conversion_rate: ConversionRate::SixteenHz,
+                    hysteresis: Hysteresis::FourC,
+                }
+            }
+
+            /// The register word after applying `cfg` to `word`.
+            fn applied(word: u16, cfg: Config) -> u16 {
+                let mut reg = Configuration::from(word.to_le_bytes());
+                ops::apply_config(&mut reg, cfg);
+                u16::from_le_bytes(reg.into())
+            }
+
+            #[test]
+            fn every_config_roundtrips_through_the_register() {
+                let mut checked = 0;
+                let produced = for_each_config(|cfg| {
+                    let mut reg = por_configuration();
+                    ops::apply_config(&mut reg, cfg);
+                    assert_eq!(ops::decode_config(reg), cfg, "roundtrip failed for {cfg:?}");
+                    checked += 1;
+                });
+
+                assert_eq!(
+                    produced, CONFIG_INHABITANTS,
+                    "Config has {produced} inhabitants, not {CONFIG_INHABITANTS}. A modelled \
+                     field was widened or narrowed: revisit this test, MODELLED_MASK, and the \
+                     bit-preservation tests below before changing the expected count."
+                );
+                assert_eq!(checked, produced);
+            }
+
+            #[test]
+            fn apply_config_preserves_every_unmodelled_bit() {
+                // Bracket the field values: a Config with every modelled
+                // bit clear and one with every modelled bit set. A mask
+                // that is too wide in the clearing direction fails on
+                // all_min; too wide in the setting direction fails on
+                // all_max.
+                // First pin MODELLED_MASK itself, two-sidedly, so it
+                // cannot be quietly too wide: clearing every modelled
+                // field on an all-ones word must leave exactly the
+                // complement, and setting every modelled field on an
+                // all-zeroes word must produce exactly the mask.
+                assert_eq!(applied(0xffff, all_min()), !MODELLED_MASK);
+                assert_eq!(applied(0x0000, all_max()), MODELLED_MASK);
+
+                for cfg in [all_min(), all_max()] {
+                    for word in 0..=u16::MAX {
+                        let out = applied(word, cfg);
+                        assert_eq!(
+                            out & !MODELLED_MASK,
+                            word & !MODELLED_MASK,
+                            "apply_config({cfg:?}) disturbed unmodelled bits of {word:#06x}: \
+                             got {out:#06x}"
+                        );
+                    }
+                }
+            }
+
+            #[test]
+            fn every_config_applied_to_the_extreme_words() {
+                // 0x0000 and 0xffff are where an over-wide setter mask
+                // shows up: it either fails to set a bit it owns or
+                // clobbers one it does not.
+                for word in [0x0000_u16, 0xffff_u16] {
+                    let produced = for_each_config(|cfg| {
+                        let out = applied(word, cfg);
+
+                        assert_eq!(
+                            out & !MODELLED_MASK,
+                            word & !MODELLED_MASK,
+                            "apply_config({cfg:?}) on {word:#06x} disturbed unmodelled bits: \
+                             got {out:#06x}"
+                        );
+
+                        let reg = Configuration::from(out.to_le_bytes());
+                        assert_eq!(
+                            ops::decode_config(reg),
+                            cfg,
+                            "apply_config({cfg:?}) on {word:#06x} did not read back"
+                        );
+                    });
+                    assert_eq!(produced, CONFIG_INHABITANTS);
+                }
+            }
+
+            #[test]
+            fn the_mode_getter_fails_exactly_on_the_reserved_encoding() {
+                // Two-sided: reserved encodings must fail, and nothing
+                // else may. A getter that widened its failure set would
+                // reject perfectly legal words.
+                for word in 0..=u16::MAX {
+                    let reg = Configuration::from(word.to_le_bytes());
+                    let reserved = (word & MODE_MASK) == RESERVED_MODE;
+                    assert_eq!(
+                        reg.m().is_err(),
+                        reserved,
+                        "word {word:#06x}: m() error state disagrees with the reserved encoding"
+                    );
+                }
+            }
+        }
+
         #[test]
         fn por_config_matches_default_configuration() {
             // ops::POR_CONFIG must match the chip's documented POR value
