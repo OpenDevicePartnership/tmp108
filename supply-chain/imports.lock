@@ -9,8 +9,8 @@ user-login = "BurntSushi"
 user-name = "Andrew Gallant"
 
 [[publisher.anyhow]]
-version = "1.0.100"
-when = "2025-09-19"
+version = "1.0.104"
+when = "2026-07-18"
 user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
@@ -37,13 +37,6 @@ user-name = "Jeff Muizelaar"
 [[publisher.find-msvc-tools]]
 version = "0.1.0"
 when = "2025-08-29"
-user-id = 539
-user-login = "cuviper"
-user-name = "Josh Stone"
-
-[[publisher.indexmap]]
-version = "2.12.0"
-when = "2025-10-17"
 user-id = 539
 user-login = "cuviper"
 user-name = "Josh Stone"
@@ -111,13 +104,6 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
-[[publisher.prettyplease]]
-version = "0.2.37"
-when = "2025-08-19"
-user-id = 3618
-user-login = "dtolnay"
-user-name = "David Tolnay"
-
 [[publisher.proc-macro2]]
 version = "1.0.102"
 when = "2025-10-22"
@@ -146,33 +132,12 @@ user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
 
-[[publisher.ryu]]
-version = "1.0.20"
-when = "2025-03-04"
-user-id = 3618
-user-login = "dtolnay"
-user-name = "David Tolnay"
-
 [[publisher.scopeguard]]
 version = "1.2.0"
 when = "2023-07-17"
 user-id = 2915
 user-login = "Amanieu"
 user-name = "Amanieu d'Antras"
-
-[[publisher.serde_json]]
-version = "1.0.145"
-when = "2025-09-14"
-user-id = 3618
-user-login = "dtolnay"
-user-name = "David Tolnay"
-
-[[publisher.syn]]
-version = "1.0.109"
-when = "2023-02-24"
-user-id = 3618
-user-login = "dtolnay"
-user-name = "David Tolnay"
 
 [[publisher.syn]]
 version = "2.0.108"
@@ -181,26 +146,12 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
-[[publisher.toml_write]]
-version = "0.1.2"
-when = "2025-06-06"
-user-id = 6743
-user-login = "epage"
-user-name = "Ed Page"
-
 [[publisher.unicode-ident]]
 version = "1.0.20"
 when = "2025-10-21"
 user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
-
-[[publisher.unicode-segmentation]]
-version = "1.12.0"
-when = "2024-09-13"
-user-id = 1139
-user-login = "Manishearth"
-user-name = "Manish Goregaokar"
 
 [[publisher.windows]]
 version = "0.61.3"
@@ -362,25 +313,11 @@ delta = "1.4.0 -> 1.5.0"
 notes = "No unsafe, no build.rs, no network access; delta adds edition-aware rustc probing and best-effort probe-file cleanup only. Assisted-by: copilot-cli:GPT-5.3-Codex"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.bitvec]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "1.0.1"
-notes = "Bit-level addressable memory library. Extensive unsafe inherent to sub-byte addressing: BitSpan bit-packs pointer+index+length, BitPtr/BitRef bit-level pointer/proxy types. All Send/Sync bounds mirror std. No build script, no proc macros, no filesystem/network/process access. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.OpenDevicePartnership.audits.cfg-if]]
 who = "Felipe Balbi <febalbi@microsoft.com>"
 criteria = "safe-to-run"
 delta = "1.0.0 -> 1.0.4"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-mcu/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.convert_case]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.6.0"
-notes = "Pure string case-conversion library. No unsafe code, no build script, no powerful imports. Only dependency is unicode-segmentation. Assisted-by: copilot-chat:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.cordyceps]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
@@ -395,32 +332,11 @@ criteria = "safe-to-deploy"
 version = "1.2.0"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/mcxa-pac/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.dd-manifest-tree]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "1.0.0"
-notes = "No unsafe code, no build script, no proc macros, no powerful imports. Pure trait abstraction unifying JSON/YAML/TOML value types. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.OpenDevicePartnership.audits.device-driver]]
 who = "Felipe Balbi <febalbi@microsoft.com>"
 criteria = "safe-to-deploy"
 version = "1.0.9"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.device-driver-generation]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "1.0.7"
-notes = "Code generation library for device-driver. No unsafe in generator itself; generated code uses unsafe for register bit ops (validated by MIR passes). Spawns rustfmt via std::process::Command. No filesystem/network access. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.device-driver-macros]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "1.0.7"
-notes = "Proc macro crate; no unsafe code, no build script. Reads manifest files from disk (relative to CARGO_MANIFEST_DIR) as expected for compile-time codegen. All code generation delegated to device-driver-generation. No network, process, or unexpected filesystem access. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
+aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/bq25723/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.embedded-hal]]
 who = "Felipe Balbi <felipe.balbi@microsoft.com>"
@@ -476,31 +392,11 @@ criteria = "safe-to-run"
 delta = "0.3.8 -> 0.3.14"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-mcu/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.funty]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "2.0.0"
-notes = "Pure trait definitions over Rust primitives. No unsafe, no build script, no proc macros, no powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.OpenDevicePartnership.audits.hash32]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-deploy"
 version = "0.3.1"
 notes = "no_std 32-bit hashing (FNV, MurmurHash3). ~10 unsafe blocks in murmur3.rs for MaybeUninit buffer handling - all sound. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.hashbrown]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.2 -> 0.14.5"
-notes = "SwissTable hash map delta. Major changes: allocator refactored out of RawTableInner, new InsertSlot type, NEON SIMD for aarch64, allocator-api2 integration, new HashTable API, strict provenance. Extensive unsafe reviewed for soundness. No build script, no proc macros, no powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.itertools]]
-who = "Robert Zieba <robertzieba@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.10.5"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.libc]]
@@ -574,13 +470,6 @@ criteria = "safe-to-deploy"
 version = "1.11.1"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.radium]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.5.3 -> 0.7.0"
-notes = "No unsafe, no proc macros. Build script reads TARGET env only. Delta adds if_atomic! macro, fetch_update method. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.OpenDevicePartnership.audits.regex-syntax]]
 who = "Felipe Balbi <febalbi@microsoft.com>"
 criteria = "safe-to-run"
@@ -619,31 +508,11 @@ version = "1.0.228"
 notes = "Diff is clean-up in proc macros"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.serde_spanned]]
-who = "jerrysxie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.6.8"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.serde_spanned]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.6.8 -> 0.6.9"
-notes = "Trivial delta: metadata, lint config, and doc formatting only. No functional code changes, no unsafe, no build script, no I/O. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.OpenDevicePartnership.audits.slab]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
 delta = "0.4.8 -> 0.4.11"
 notes = "Delta 0.4.8->0.4.11: new get_disjoint_mut uses unsafe (MaybeUninit + raw ptrs) with sound bounds/overlap checks. build.rs removed. No powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.tap]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "1.0.1"
-notes = "No unsafe, no build.rs, no ambient I/O/process/network capabilities; behavior matches no_std tap/pipe/conv utility traits. Assisted-by: copilot-cli:GPT-5.3-Codex"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.thiserror]]
@@ -663,45 +532,6 @@ who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-deploy"
 delta = "1.1.4 -> 1.1.9"
 notes = "No build script, no FS/net/process capability expansion; unsafe refactor to lock-free insertion and nightly TLS path appears sound on review. Assisted-by: copilot-cli:GPT-5.3-Codex"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml]]
-who = "jerrysxie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.8.22"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.8.22 -> 0.8.23"
-notes = "Delta: adds TupleVariant/StructVariant serialization support. All new code is thin wrappers delegating to toml_edit. No unsafe (forbid(unsafe_code)), no build script, no powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml_datetime]]
-who = "jerrysxie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.6.9"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml_datetime]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.6.9 -> 0.6.11"
-notes = "Delta 0.6.9->0.6.11: parser refactored from char-by-char to lexer-based tokenizer with improved error messages; no unsafe (forbid(unsafe_code)), no build script, no powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml_edit]]
-who = "jerrysxie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.22.26"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.toml_edit]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.22.26 -> 0.22.27"
-notes = "Delta: no changes to unsafe code (all pre-existing from_utf8_unchecked on ASCII-validated buffers). Visibility reductions on parser internals, serializer refactoring, new consuming accessors. No build script, no proc macros, no powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.tracing-attributes]]
@@ -795,26 +625,6 @@ criteria = "safe-to-run"
 version = "0.52.6"
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
-[[audits.OpenDevicePartnership.audits.winnow]]
-who = "jerrysxie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.7.10"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.winnow]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-delta = "0.7.10 -> 0.7.13"
-notes = "Delta adds Accumulate impls (Cow str, String, VecDeque), fixes macro PartialEq/PartialOrd, optimizes str::next_token, adds tests, improves docs. No unsafe changes, no build script, no new powerful imports. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.wyz]]
-who = "Jerry Xie <jerryxie@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.5.1"
-notes = "Pointer abstraction unsafe in comu.rs delegates to std NonNull ops. wm.rs Send/Sync behind Mutex/RwLock (std+garbage only). Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
 [[audits.bytecode-alliance.audits.atomic-waker]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
@@ -885,41 +695,6 @@ criteria = "safe-to-deploy"
 delta = "0.1.0 -> 0.1.4"
 notes = "Nothing out of the ordinary for a crate finding MSVC tooling."
 
-[[audits.bytecode-alliance.audits.hashbrown]]
-who = "Chris Fallin <chris@cfallin.org>"
-criteria = "safe-to-deploy"
-delta = "0.12.3 -> 0.13.1"
-notes = "The diff looks plausible. Much of it is low-level memory-layout code and I can't be 100% certain without a deeper dive into the implementation logic, but nothing looks actively malicious."
-
-[[audits.bytecode-alliance.audits.hashbrown]]
-who = "Trevor Elliott <telliott@fastly.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.1 -> 0.13.2"
-notes = "I read through the diff between v0.13.1 and v0.13.2, and verified that the changes made matched up with the changelog entries. There were very few changes between these two releases, and it was easy to verify what they did."
-
-[[audits.bytecode-alliance.audits.hashbrown]]
-who = "Chris Fallin <chris@cfallin.org>"
-criteria = "safe-to-deploy"
-delta = "0.14.5 -> 0.15.2"
-
-[[audits.bytecode-alliance.audits.itertools]]
-who = "Nick Fitzgerald <fitzgen@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.10.5 -> 0.12.1"
-notes = """
-Minimal `unsafe` usage. Few blocks that existed looked reasonable. Does what it
-says on the tin: lots of iterators.
-"""
-
-[[audits.bytecode-alliance.audits.itertools]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.12.1 -> 0.14.0"
-notes = """
-Lots of new iterators and shuffling some things around. Some new unsafe code but
-it's well-documented and well-tested. Nothing suspicious.
-"""
-
 [[audits.bytecode-alliance.audits.log]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
@@ -943,16 +718,6 @@ criteria = "safe-to-deploy"
 delta = "0.50.1 -> 0.50.3"
 notes = "CI changes, Rust changes, nothing out of the ordinary."
 
-[[audits.bytecode-alliance.audits.percent-encoding]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "2.2.0"
-notes = """
-This crate is a single-file crate that does what it says on the tin. There are
-a few `unsafe` blocks related to utf-8 validation which are locally verifiable
-as correct and otherwise this crate is good to go.
-"""
-
 [[audits.bytecode-alliance.audits.postcard]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
@@ -967,28 +732,6 @@ who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 delta = "1.0.8 -> 1.1.3"
 notes = "Substantial updates, but nothing out of the ordinary one would expect from a serialization crate. Minor `unsafe` updates, but nothing major from what was already there."
-
-[[audits.bytecode-alliance.audits.pulldown-cmark]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "0.8.0"
-notes = """
-This crate has `unsafe` blocks and they're all related to SIMD-acceleration and
-are otherwise not doing other `unsafe` operations. Additionally the crate does
-not do anything other than markdown rendering as is expected.
-"""
-
-[[audits.bytecode-alliance.audits.pulldown-cmark]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.8.0 -> 0.9.3"
-notes = """
-This is a large change to the `pulldown-cmark` crate but it tightens
-restrictions on `unsafe` code to forbid it in non-SIMD mode and additionally
-many changes look to be related to refactoring, improving, and restructuring.
-This crate is not fundamentally different from before, which was trusted, but
-looks to be receiving new assistance for maintainership as well.
-"""
 
 [[audits.bytecode-alliance.audits.sharded-slab]]
 who = "Pat Hickey <phickey@fastly.com>"
@@ -1009,15 +752,6 @@ ecosystem. There's one `unsafe` block in this crate and it's well-scoped.
 who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
 version = "0.3.17"
-
-[[audits.bytecode-alliance.audits.unicase]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "2.6.0"
-notes = """
-This crate contains no `unsafe` code and no unnecessary use of the standard
-library.
-"""
 
 [[audits.google.audits.atomic-polyfill]]
 who = "ChromeOS"
@@ -1074,52 +808,11 @@ version = "0.8.7"
 notes = "OSX system APIs"
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
-[[audits.google.audits.either]]
-who = "Manish Goregaokar <manishearth@google.com>"
-criteria = "safe-to-deploy"
-version = "1.13.0"
-notes = "Unsafe code pertaining to wrapping Pin APIs. Mostly passes invariants down."
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.either]]
-who = "Daniel Cheng <dcheng@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.13.0 -> 1.14.0"
-notes = """
-Inheriting ub-risk-1 from the baseline review of 1.13.0. While the delta has some diffs in unsafe code, they are either:
-- migrating code to use helper macros
-- migrating match patterns to take advantage of default bindings mode from RFC 2005
-Either way, the result is code that does exactly the same thing and does not change the risk of UB.
-
-See https://crrev.com/c/6323164 for more audit details.
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.either]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.14.0 -> 1.15.0"
-notes = 'The delta in `lib.rs` only tweaks doc comments and `#[cfg(feature = "std")]`.'
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
 [[audits.google.audits.embedded-hal-mock]]
 who = "George Burgess IV <gbiv@google.com>"
 criteria = "safe-to-run"
 version = "0.8.0"
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.equivalent]]
-who = "George Burgess IV <gbiv@google.com>"
-criteria = "safe-to-deploy"
-version = "1.0.1"
-aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.equivalent]]
-who = "Jonathan Hao <phao@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.0.1 -> 1.0.2"
-notes = "No changes to any .rs files or Rust code."
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.errno]]
 who = "Ying Hsu <yinghsu@chromium.org>"
@@ -1148,51 +841,6 @@ does-not-implement-crypto: Hashing containers (e.g., IndexMap) defer to other
 machinery like the hash32 crate for hashing.
 """
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.itoa]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "1.0.10"
-notes = '''
-I grepped for \"crypt\", \"cipher\", \"fs\", \"net\" - there were no hits.
-
-There are a few places where `unsafe` is used.  Unsafe review notes can be found
-in https://crrev.com/c/5350697.
-
-Version 1.0.1 of this crate has been added to Chromium in
-https://crrev.com/c/3321896.
-'''
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.itoa]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.0.10 -> 1.0.11"
-notes = """
-Straightforward diff between 1.0.10 and 1.0.11 - only 3 commits:
-
-* Bumping up the version
-* A touch up of comments
-* And my own PR to make `unsafe` blocks more granular:
-  https://github.com/dtolnay/itoa/pull/42
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.itoa]]
-who = "Liza Burakova <liza@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.0.11 -> 1.0.14"
-notes = """
-Unsafe review at https://crrev.com/c/6051067
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.itoa]]
-who = "Daniel Cheng <dcheng@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.0.14 -> 1.0.15"
-notes = "Only minor rustdoc changes."
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.lazy_static]]
 who = "Android Legacy"
@@ -1524,76 +1172,6 @@ renew = false
 notes = "I've reviewed every source contribution that was neither authored nor reviewed by Mozilla."
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
-[[audits.mozilla.wildcard-audits.unicode-segmentation]]
-who = "Manish Goregaokar <manishsmail@gmail.com>"
-criteria = "safe-to-deploy"
-user-id = 1139 # Manish Goregaokar (Manishearth)
-start = "2019-05-15"
-end = "2027-04-23"
-notes = "All code written or reviewed by Manish"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-version = "0.13.1"
-notes = """
-Template crate.  This is only used to generate the Rust/JS code for UniFFI.
-
-We used to use askama, then we switched to rinja which was a fork.  Now rinja and
-askama have merged again.
-
-The differences from askama 0.12, are pretty straightforward and don't seem risky to me.  There's
-some unsafe code and macros, but nothing that complicated.
-"""
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.1 -> 0.14.0"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama_derive]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-version = "0.13.1"
-notes = """
-Template crate.  This is only used to generate the Rust/JS code for UniFFI.
-
-We used to use askama, then we switched to rinja which was a fork.  Now rinja and
-askama have merged again.
-
-I did a quick scan of the current code and couldn't find any issues.
-"""
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama_derive]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.1 -> 0.14.0"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama_parser]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-version = "0.13.0"
-notes = """
-Template crate.  This is only used to generate the Rust/JS code for UniFFI.
-
-We used to use askama, then we switched to rinja which was a fork.  Now rinja and
-askama have merged again.
-
-I did a quick scan of the current code and couldn't find any issues.
-"""
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.askama_parser]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.0 -> 0.14.0"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
-
 [[audits.mozilla.audits.bitflags]]
 who = "Alex Franchuk <afranchuk@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -1648,25 +1226,6 @@ delta = "0.9.3 -> 0.9.4"
 notes = "I've reviewed every source contribution that was neither authored nor reviewed by Mozilla."
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
-[[audits.mozilla.audits.hashbrown]]
-who = "Mike Hommey <mh+mozilla@glandium.org>"
-criteria = "safe-to-deploy"
-version = "0.12.3"
-notes = "This version is used in rust's libstd, so effectively we're already trusting it"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.hashbrown]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.15.2 -> 0.15.5"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.hashbrown]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.15.5 -> 0.16.0"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
 [[audits.mozilla.audits.once_cell]]
 who = "Erich Gubler <erichdongubler@gmail.com>"
 criteria = "safe-to-deploy"
@@ -1685,24 +1244,6 @@ criteria = "safe-to-deploy"
 delta = "1.21.1 -> 1.21.3"
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
-[[audits.mozilla.audits.percent-encoding]]
-who = "Valentin Gosu <valentin.gosu@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "2.2.0 -> 2.3.0"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.percent-encoding]]
-who = "Valentin Gosu <valentin.gosu@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "2.3.0 -> 2.3.1"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.percent-encoding]]
-who = "edgul <ed.guloien@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "2.3.1 -> 2.3.2"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
 [[audits.mozilla.audits.pin-project-lite]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
@@ -1718,34 +1259,6 @@ Only functional change is to work around a bug in the negative_impls feature
 (https://github.com/taiki-e/pin-project/issues/340#issuecomment-2432146009)
 """
 aggregated-from = "https://raw.githubusercontent.com/mozilla/cargo-vet/main/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.radium]]
-who = "Nika Layzell <nika@thelayzells.com>"
-criteria = "safe-to-deploy"
-version = "0.5.3"
-notes = """
-I am no longer the primary maintainer of `radium`, however I have audited the
-code to ensure it is still correct. The implementation contains no `unsafe`
-logic, and will not abstract away `Sync` trait bounds.
-
-The core logic is very simple, and acts as an abstraction trait for `Cell<T>`
-and `AtomicT`.
-"""
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.rustc-hash]]
-who = "Bobby Holley <bobbyholley@gmail.com>"
-criteria = "safe-to-deploy"
-version = "1.1.0"
-notes = "Straightforward crate with no unsafe code, does what it says on the tin."
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.rustc-hash]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "1.1.0 -> 2.1.1"
-notes = "Simple hashing crate, no unsafe code."
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
 [[audits.mozilla.audits.scoped-tls]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -1841,13 +1354,6 @@ who = "Mark Hammond <mhammond@skippinet.com.au>"
 criteria = "safe-to-deploy"
 delta = "0.3.19 -> 0.3.20"
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.unicase]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "2.6.0 -> 2.8.1"
-notes = "Update to Unicode 15.0.0"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
 
 [[audits.mozilla.audits.windows-link]]
 who = "Mark Hammond <mhammond@skippinet.com.au>"
