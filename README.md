@@ -127,8 +127,15 @@ available simultaneously when both relevant features are enabled.
   `tokio::time::timeout`) leaves the chip in `Mode::Continuous`. See
   the method's doc.
 - **Temperature scale.** Raw register values are 12-bit signed in the upper
-  bits of a 16-bit register; the driver returns `f32` Celsius at
-  0.0625 °C/LSB.
+  bits of a 16-bit register at 0.0625 °C/LSB. The driver models this as
+  `Celsius`, a newtype over sixteenths of a degree whose 4096 inhabitants
+  are exactly the temperatures the part can report or accept as a limit.
+  `Celsius::try_from_degrees` is the single fallible parse (it rejects
+  `NaN`, infinities and out-of-range values, and rounds half away from
+  zero); `Celsius::to_degrees` renders back to `f32`, and `Display`
+  honours precision so `{t:.2}` works. The `embedded-sensors-hal` trait
+  impls keep their `DegreesCelsius` (`f32`) signatures and translate at
+  the boundary.
 
 ## MSRV
 
