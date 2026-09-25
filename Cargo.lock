@@ -121,9 +121,9 @@ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "device-driver"
-version = "2.1.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2503fa8477e63231b485f927f7e578cf05de86ab8a883f6d7b401d8adcd169c4"
+checksum = "c38a909a99943e2348df3f1ec63c9bf4ad84aa2f38484db17be88ec067d7344b"
 
 [[package]]
 name = "embedded-hal"
