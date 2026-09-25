@@ -72,30 +72,14 @@ Today that directory holds at least:
 |---|---|---|
 | `docs/vendor/datasheet.txt` | TMP108 datasheet | SBOS663A, April 2013, revised September 2019 |
 
-`datasheet.txt` was produced with:
-
-```bash
-EXPECTED=ec086250fc4331e7fc923be62173062bbf0fccedad6894c2741b73cd1c084556
-curl --fail --location --proto '=https' --tlsv1.2 -o tmp108.pdf \
-    https://www.ti.com/lit/ds/symlink/tmp108.pdf
-printf '%s  %s\n' "${EXPECTED}" tmp108.pdf | sha256sum --check - || {
-    echo "TI changed the PDF behind the unversioned URL." >&2
-    echo "Line anchors in existing reviews and specs may no longer resolve." >&2
-    exit 1
-}
-pdftotext -layout tmp108.pdf docs/vendor/datasheet.txt
-sed -i 's/\r$//' docs/vendor/datasheet.txt
-```
-
-The hash check is not ceremony. `lit/ds/symlink/` is unversioned, so TI can
-replace those bytes without notice; a regeneration that silently succeeds
-against a new revision invalidates every line anchor in this skill, in past
-reviews, and in `docs/superpowers/specs/`. If the check fails, **stop** — the
-fix is a deliberate re-anchoring, not a quiet overwrite.
-
-`-layout` is equally load-bearing: it is what keeps register tables on
-greppable lines. Only regenerate if the file is missing or demonstrably
-stale; otherwise prefer the committed extract.
+These are reproductions of TI's copyrighted documentation, kept here so a
+review can quote the specification instead of recalling it. They are not
+covered by the repository's MIT license, and they are not authoritative —
+`docs/vendor/README.md` records their provenance, the source `sha256` of
+each, the regeneration procedure, and links to TI's official publications.
+Read it if an extract looks stale or is missing; do not regenerate one
+casually, because line anchors in this skill and in past reviews depend on
+the committed bytes.
 
 ### Citing a hardware fact
 
