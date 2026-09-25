@@ -6,6 +6,37 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/OpenDevicePartnership/tmp108/compare/v0.6.0...v0.7.0) - 2026-09-25
+
+### Added
+
+- supervise a complete one-shot acquisition
+- *(alert)* report which threshold was crossed
+
+### Fixed
+
+- [**breaking**] make one_shot() acquire a sample, not just trigger one
+- do not retrigger a one-shot on reconfiguration
+- [**breaking**] decode M = 0b11 as continuous mode
+- *(alert)* retain an acknowledged event when the sample read fails
+- *(alert)* report an already-latched alert
+- *(ddsl)* declare power-on reset values for THIGH and TLOW
+
+### Other
+
+- make the one-shot example actually perform a one-shot
+- stop pointing callers at a bare one_shot for fresh reads
+- Bump embedded-sensors-hal-async from 0.3.0 to 0.4.0
+- Bump tokio from 1.52.3 to 1.53.1
+- Bump embedded-sensors-hal from 0.1.0 to 0.1.1
+- *(readme)* scope the alert-cause caveat to the scalar waiter
+- Update comments in apply_config for clarity
+- give the empty-GPIO assertions their reasons
+- record async timeline events on poll, not construction
+- *(alert)* document retained delivery after a failed sample read
+- correct the documented alert contract
+- Bump pico de gallo dependencies
+
 ### Breaking
 
 - `Mode` decoding is now total (#62). Both `M = 0b10` and `M = 0b11`
