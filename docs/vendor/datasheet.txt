@@ -1,0 +1,1619 @@
+                                 Product           Order       Technical                 Tools &           Support &
+                                 Folder            Now         Documents                 Software          Community
+
+
+
+                                                                                                                                     TMP108
+                                                                                                 SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+     TMP108 Low Power Digital Temperature Sensor With Two-Wire Serial Interface in WCSP
+1 Features                                                               3 Description
+1•    Dynamically-programmable limit window with                         TMP108 is a digital-output temperature sensor with a
+      under- and overtemperature alerts                                  dynamically-programmable limit window, and under-
+                                                                         and overtemperature alert functions. These features
+•     Accuracy:                                                          provide optimized temperature control without the
+      ±0.75°C (maximum) from –20°C to +85°C                              need of frequent temperature readings by the
+      ±1°C (maximum) from –40°C to +125°C                                controller or application processor.
+•     Low quiescent current:                                             The TMP108 features SMBus and two-wire interface
+      6 μA active (maximum) from –40°C to +125°C                         compatibility, and allows up to four devices on one
+•     Supply range: 1.4 V to 3.6 V                                       bus with the SMBus alert function.
+•     Resolution: 12 bits (0.0625°C)                                     The TMP108 is designed for thermal management
+•     Package: 1.2-mm × 0.8-mm, 6-ball WCSP                              optimization in a variety of consumer, computer, and
+                                                                         environmental applications. The device is specified
+2 Applications                                                           over a temperature range of –40°C to +125°C.
+
+•     Smartphone and tablet thermal management                                                      Device Information(1)
+•     Battery management                                                     PART NUMBER              PACKAGE           BODY SIZE (NOM)
+•     Thermostat control                                                   TMP108                     DSBGA (6)         1.20 mm × 0.80 mm
+•     Under- and overtemperature protection                                (1) For all available packages, see the orderable addendum at
+                                                                               the end of the data sheet.
+•     Environmental monitoring and HVAC
+
+
+                                                            Block Diagram
+
+                                                                    TMP108
+
+                                                           Diode
+                                                    A1                        Control       A2
+                                              V+            Temp                                    GND
+                                                                               Logic
+                                                           Sensor
+
+
+
+
+                                                    B1       DS                Serial       B2
+                                              A0                                                    SCL
+                                                            ADC              Interface
+
+
+
+
+                                                                               Config
+                                                    C1                                      C2
+                                           ALERT           OSC               and Temp               SDA
+                                                                              Register
+
+
+
+
+1
+
+
+
+
+        An IMPORTANT NOTICE at the end of this data sheet addresses availability, warranty, changes, use in safety-critical applications,
+        intellectual property matters and other important disclaimers. PRODUCTION DATA.
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                                                        www.ti.com
+
+
+                                                                           Table of Contents
+    1   Features .................................................................. 1               7.4 Device Functional Modes........................................ 11
+    2   Applications ........................................................... 1                  7.5 Programming........................................................... 12
+    3   Description ............................................................. 1           8    Application and Implementation ........................ 17
+    4   Revision History..................................................... 2                     8.1 Application Information............................................ 17
+                                                                                                    8.2 Typical Application ................................................. 17
+    5   Pin Configuration and Functions ......................... 3
+    6   Specifications......................................................... 3             9 Power Supply Recommendations...................... 18
+         6.1    Absolute Maximum Ratings ..................................... 3              10 Layout................................................................... 19
+         6.2    ESD Ratings.............................................................. 3         10.1 Layout Guidelines ................................................. 19
+         6.3    Recommended Operating Conditions....................... 4                           10.2 Layout Example .................................................... 19
+         6.4    Thermal Information .................................................. 4      11 Device and Documentation Support ................. 20
+         6.5    Electrical Characteristics........................................... 4             11.1    Receiving Notification of Documentation Updates 20
+         6.6    Timing Diagrams ....................................................... 5           11.2    Support Resources ............................................... 20
+         6.7    Typical Characteristics .............................................. 8            11.3    Trademarks ........................................................... 20
+    7   Detailed Description .............................................. 9                       11.4    Electrostatic Discharge Caution ............................ 20
+         7.1 Overview ................................................................... 9         11.5    Glossary ................................................................ 20
+         7.2 Functional Block Diagram ......................................... 9             12 Mechanical, Packaging, and Orderable
+         7.3 Feature Description................................................... 9            Information ........................................................... 20
+
+
+
+4 Revision History
+Changes from Original (April 2013) to Revision A                                                                                                                               Page
+
+•   Added Pin Configuration and Functions section, ESD Ratings table, Feature Description section, Device Functional
+    Modes, Application and Implementation section, Power Supply Recommendations section, Layout section, Device
+    and Documentation Support section, and Mechanical, Packaging, and Orderable Information section .............................. 1
+•   Changed supply voltage maximum value from: 3.6 V to: 4 V ............................................................................................... 3
+•   Changed input voltage maximum value for the SDA and SCL pins from: 3.6 V to: 4 V ....................................................... 3
+•   Changed input voltage maximum value for the A0 and ALERT pins from: (V+) + 0.3 V to: ((V+) + 0.5) and ≤ 4 V ............. 3
+•   Changed Temperature Error at +25°C graph ......................................................................................................................... 8
+
+
+
+
+2        Submit Documentation Feedback                                                                         Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                                          Product Folder Links: TMP108
+                                                                                                                                       TMP108
+www.ti.com                                                                                        SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+5 Pin Configuration and Functions
+
+                                                                     YFF Package
+                                                                     6-Pin DSBGA
+                                                                       Top View
+                                                                           1         2
+
+
+
+
+                                                          A                V+       GND
+
+
+
+
+                                                          B                A0       SCL
+
+
+
+
+                                                          C           ALERT         SDA
+
+
+
+                                                                                   Not to scale
+
+
+                                                                   Pin Functions
+                PIN
+                                          I/O                                                 DESCRIPTION
+NAME                       NO.
+A0                         B1               I           Address selection pin. Connect to GND, V+, SDA, or SCL.
+ALERT                      C1              O            Alert output pin
+GND                        A2              —            Ground
+SCL                        B2               I           Input clock pin
+SDA                        C2             I/O           Input/output data pin
+V+                         A1               I           Supply voltage (1.4 V to 3.6 V)
+
+
+6 Specifications
+6.1 Absolute Maximum Ratings (1)
+                                                                                                           MIN          MAX            UNIT
+Supply voltage                                                                                                            4             V
+                 SDA and SCL (2)                                                                           –0.5           4             V
+Input voltage                                                                                                      ((V+) + 0.5) and
+                 A0 and ALERT                                                                              –0.5                         V
+                                                                                                                          ≤4
+Operating temperature                                                                                      –55           150            °C
+Junction temperature                                                                                                     150            °C
+Storage temperature, Tstg                                                                                  –60           150            °C
+
+(1)   Stresses beyond those listed under Absolute Maximum Ratings may cause permanent damage to the device. These are stress ratings
+      only, which do not imply functional operation of the device at these or any other conditions beyond those indicated under Recommended
+      Operating Conditions. Exposure to absolute-maximum-rated conditions for extended periods may affect device reliability.
+(2)   If A0 is connected to SCL or SDA, the input voltage rating for A0 applies to SCL or SDA.
+
+6.2 ESD Ratings
+                                                                                                                              VALUE     UNIT
+                                                                                                     (1)
+           Electrostatic             Human-body model (HBM), per ANSI/ESDA/JEDEC JS-001                                       ±2000
+V(ESD)                                                                                                                                      V
+           discharge                 Charged-device model (CDM), per JEDEC specification JESD22-C101 (2)                      ±1000
+
+(1)   JEDEC document JEP155 states that 500-V HBM allows safe manufacturing with a standard ESD control process.
+(2)   JEDEC document JEP157 states that 250-V CDM allows safe manufacturing with a standard ESD control process.
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                                       Submit Documentation Feedback       3
+                                                              Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                                             www.ti.com
+
+
+6.3 Recommended Operating Conditions
+                                                                                                                            MIN              MAX            UNIT
+V+                                Supply voltage                                                                             1.4              3.6            V
+TA                                Operating free-air temperature                                                            –40              +125            °C
+
+
+6.4 Thermal Information
+                                                                                                                            TMP108
+                                                THERMAL METRIC                                                        YFF (DSBGA)                      UNIT
+                                                                                                                            6 PINS
+θJA                            Junction-to-ambient thermal resistance                                                        132.7                     °C/W
+θJC(top)                       Junction-to-case(top) thermal resistance                                                       1.7                      °C/W
+θJB                            Junction-to-board thermal resistance                                                           23                       °C/W
+ψJT                            Junction-to-top characterization parameter                                                     6                        °C/W
+ψJB                            Junction-to-board characterization parameter                                                  22.6                      °C/W
+θJC(bottom)                    Junction-to-case(bottom) thermal resistance                                                   N/A                       °C/W
+
+
+6.5 Electrical Characteristics
+At TA = +25°C, and V+ = +1.8 V, unless otherwise noted.
+                    PARAMETER                                           TEST CONDITIONS                              MIN              TYP        MAX          UNIT
+TEMPERATURE INPUT
+              Range                                                                                                  –40                        +125             °C
+                                                   –20°C to +85°C                                                  –0.75             ±0.15          0.75         °C
+              Accuracy (temperature error)
+                                                   –40°C to +125°C                                                    –1              ±0.3            1          °C
+              Accuracy vs supply                                                                                    –0.3             ±0.03           0.3      °C/V
+DIGITAL INPUT/OUTPUT
+VIH           Input logic high level                                                                             0.7 (V+)                            V+           V
+VIL           Input logic low level                                                                                 –0.5                      0.3 (V+)            V
+IIN           Input current                        0 V < VIN < (V+) +0.3 V                                                                            1          μA
+                                                   V+ > 2 V, IOUT = 3 mA                                                                             0.4          V
+VOL           Output logic low level
+                                                   V+ < 2 V, IOUT = 3 mA                                                                      0.2 (V+)            V
+              ALERT internal pullup resistor       ALERT to V+                                                        80              100           120          kΩ
+              Resolution                                                                                                               12                        Bit
+              Conversion time                      One-Shot mode                                                      21               27            33          ms
+                                                   CR1 = 0, CR0 = 0                                                                   0.25                   Conv/s
+                                                   CR1 = 0, CR0 = 1 (default)                                                           1                    Conv/s
+              Conversion modes
+                                                   CR1 = 1, CR0 = 0                                                                     4                    Conv/s
+                                                   CR1 = 1, CR0 = 1                                                                    16                    Conv/s
+              Timeout time                                                                                            21               28            35          ms
+POWER SUPPLY
+                                                   Serial bus inactive, CR1 = 0, CR0 = 1 (default)                                      2            3.5         μA
+                                                   Serial bus inactive, CR1 = 0, CR0 = 1 (default), –40°C
+                                                                                                                                                      6          μA
+                                                   to +125°C
+IQ            Quiescent current                    Serial bus active, SCL frequency = 400 kHz, CR1 = 0,
+                                                                                                                                       12                        μA
+                                                   CR0 = 1 (default)
+                                                   Serial bus active, SCL frequency = 3.4 MHz, CR1 = 0,
+                                                                                                                                       82                        μA
+                                                   CR0 = 1 (default)
+                                                   Serial bus inactive                                                                 0.3            1          μA
+ISD           Shutdown current                     Serial bus active, SCL frequency = 400 kHz                                          10                        μA
+                                                   Serial bus active, SCL frequency = 3.4 MHz                                          80                        μA
+
+
+
+
+4          Submit Documentation Feedback                                                                    Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                                      Product Folder Links: TMP108
+                                                                                                                               TMP108
+www.ti.com                                                                                SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+6.6 Timing Diagrams
+The TMP108 is two-wire and SMBus compatible. Figure 1 to Figure 4 describe the various operations on the
+TMP108. Parameters for Figure 1 are defined in Table 1. Bus definitions are:
+Bus Idle: Both SDA and SCL lines remain high.
+Start Data Transfer: A change in the state of the SDA line, from high to low, while the SCL line is high defines a
+start condition. Each data transfer is initiated with a start condition.
+Stop Data Transfer: A change in the state of the SDA line from low to high while the SCL line is high defines a
+stop condition. Each data transfer is terminated with a repeated start or stop condition.
+Data Transfer: The number of data bytes transferred between a start and a stop condition is not limited, and is
+determined by the master device. The receiver acknowledges the transfer of data. It is also possible to use the
+TMP108 for single-byte updates. To update only the MS byte, terminate communication by issuing a start or stop
+condition on the bus.
+Acknowledge: Each receiving device, when addressed, must generate an acknowledge bit. A device that
+acknowledges must pull down the SDA line during the acknowledge clock pulse so that the SDA line is stable
+low during the high period of the acknowledge clock pulse. Setup and hold times must be taken into account.
+When a master receives data, the termination of the data transfer can be signaled by the master generating a
+not-acknowledge (1) on the last byte transmitted by the slave.
+
+                                                  Table 1. Timing Diagram Definitions
+                                                                                FAST MODE             HIGH-SPEED MODE
+                                                                                  MIN       MAX            MIN         MAX      UNIT
+                    SCL operating frequency, V+ ≥ 1.8 V                          0.001        0.4         0.001         3.4     MHz
+f(SCL)
+                    SCL operating frequency, V+ < 1.8 V                          0.001        0.4         0.001         2.5     MHz
+                    Bus free time between stop and start conditions, V+
+                                                                                 1300                       160                     ns
+                    ≥ 1.8 V
+t(BUF)
+                    Bus free time between stop and start conditions, V+
+                                                                                 1300                       260                     ns
+                    < 1.8 V
+                    Hold time after repeated start condition.
+t(HDSTA)                                                                          600                       160                     ns
+                    After this period, the first clock is generated.
+t(SUSTA)            Repeated start condition setup time                           600                       160                     ns
+t(SUSTO)            Stop condition setup time                                     600                       160                     ns
+                    Data hold time, V+ ≥ 1.8 V                                       0       900              0          70         ns
+t(HDDAT)
+                    Data hold time, V+ < 1.8 V                                       0       900              0         130         ns
+                    Data setup time, V+ ≥ 1.8 V                                   100                        10                     ns
+t(SUDAT)
+                    Data setup time, V+ < 1.8 V                                   100                        50                     ns
+                    SCL clock low period, V+ ≥ 1.8 V                             1300                       160                     ns
+t(LOW)
+                    SCL clock low period, V+ < 1.8 V                             1300                       260                     ns
+t(HIGH)             SCL clock high period                                         600                        60                     ns
+tR , tF - SDA       Data rise/fall time                                                      300                         80         ns
+tR , tF - SCL       Clock rise/fall time                                                     300                         40         ns
+tR                  Clock/data rise time for SCLK ≤ 100 kHz                                 1000                                    ns
+
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                               Submit Documentation Feedback        5
+                                                           Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                                                                           www.ti.com
+
+
+6.6.1 Two-Wire Timing Diagrams
+                                         t(LOW)
+                                                       tR                         tF                                           t(HDSTA)
+
+
+        SCL
+
+                                            t(HDSTA)                            t(HIGH)    t(SUSTA)                                                                                    t(SUSTO)
+                                                                     t(HDDAT)                t(SUDAT)
+
+        SDA
+                         t(BUF)
+
+                  P               S                                                                              S                                                             P
+
+
+                                                            Figure 1. Two-Wire Timing Diagram
+
+                           1                                                           9       1                                                                      9
+
+        SCL                                                                                                                                                                    ¼
+
+
+        SDA                1      0     0       1      0     A1(1)   A0(1)   R/W               0        0        0         0        0        0        P1        P0             ¼
+              Start By                                                             ACK By                                                                        ACK By
+              Master                                                               Device                                                                        Device
+
+                                  Frame 1 Two-Wire Slave Address Byte                                                Frame 2 Pointer Register Byte
+
+                           1                                                           9                    1                                                                      9
+       SCL
+(Continued)
+
+
+
+       SDA
+                          D7      D6   D5       D4     D3    D2      D1      D0                             D7        D6       D5       D4       D3        D2    D1       D0
+(Continued)
+                                                                                ACK By                                                                                     ACK By                 Stop By
+                                                                                Device                                                                                     Device                 Master
+
+                                         Frame 3 Data Byte 1                                                               Frame 4 Data Byte 2
+
+       (1)    The value of A0 and A1 are determined by the A0 pin.
+
+                                       Figure 2. Two-Wire Timing Diagram for Write Word Format
+
+
+
+
+6        Submit Documentation Feedback                                                                                         Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                                      Product Folder Links: TMP108
+                                                                                                                                                                                               TMP108
+www.ti.com                                                                                                                    SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+
+                                1                                                                9           1                                                              9
+
+             SCL                                                                                                                                                                          ¼
+
+
+                                                                   (1)         (1)
+             SDA                1     0     0      1      0   A1          A0          R/W                    0   0      0       0     0         0      P1          P0
+
+                    Start By                                                                 ACK By                                                                       ACK By          Stop By
+                    Master                                                                   Device                                                                       Device          Master
+
+                                     Frame 1 Two-Wire Slave Address Byte                                                    Frame 2 Pointer Register Byte
+
+
+                                1                                                                9           1                                                              9
+            SCL                                                                                                                                                                           ¼
+     (Continued)
+
+
+
+            SDA                                                    (1)         (1)
+                                1     0     0      1      0   A1          A0          R/W                D7      D6     D5      D4    D3    D2         D1           D0         ¼
+     (Continued)
+                    Start By                                                                 ACK By                                              From                           ACK By
+                    Master                                                                   Device                                             Device                                   (2)
+                                                                                                                                                                                Master
+                                     Frame 3 Two-Wire Slave Address Byte                                                Frame 4 Data Byte 1 Read Register
+
+
+                       1                                                              9
+            SCL
+     (Continued)
+
+
+
+            SDA
+                       D7      D6   D5     D4    D3      D2   D1          D0
+     (Continued)
+                                                 From                           ACK By               Stop By
+                                                Device                                     (3)       Master
+                                                                                Master
+                                    Frame 5 Data Byte 2 Read Register
+
+       (1)    The value of A0 and A1 are determined by the A0 pin.
+       (2)    Master should leave SDA high to terminate a single-byte read operation.
+       (3)    Master should leave SDA high to terminate a two-byte read operation.
+
+                                         Figure 3. Two-Wire Timing Diagram for Read Word Format
+
+
+        ALERT
+
+
+                                1                                                                9       1                                                                 9
+
+             SCL
+
+
+
+
+                                                                                                                                                (1)        (1)
+             SDA                0    0      0     1      1    0            0         R/W                 1       0      0      1           A1         A0         Status
+
+                   Start By                                                                ACK By                                           From                    NACK By         Stop By
+                   Master                                                                  Device                                          Device                    Master         Master
+                                Frame 1 SMBus ALERT Response Address Byte                                             Frame 2 Slave Address From Device
+
+       (1)    The value of A0 and A1 are determined by the A0 pin.
+
+                                                      Figure 4. Timing Diagram for SMBus Alert
+
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                                                                  Submit Documentation Feedback                                7
+                                                                         Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                                                                                                              www.ti.com
+
+
+6.7 Typical Characteristics
+At TA = +25°C and V+ = 1.8 V, unless otherwise noted.
+
+                                               12                                                                                                            10
+                                                                 V+ = 1.4 V                                                                                                    V+ = 1.4 V
+                                                                 V+ = 1.8 V                                                                                   9                V+ = 1.8 V
+                                               10
+                                                                 V+ = 3.6 V                                                                                   8                V+ = 3.6 V
+                                                                                                                                                              7
+                                                8
+                                                                                                                                                              6
+
+
+
+
+                                                                                                                                                  ISD ( A)
+                        IQ ( A)
+
+
+
+
+                                                6                                                                                                             5
+                                                                                                                                                              4
+                                                4
+                                                                                                                                                              3
+                                                                                                                                                              2
+                                                2
+                                                                                                                                                              1
+                                                0                                                                                                             0
+                                                     ±50             0              50           100          150                                                 ±50                0            50            100              150
+                                                                              Temperature (ƒC)                 C001                                                                         Temperature (ƒC)                      C002
+
+
+
+
+                Figure 5. Quiescent Current vs Temperature (1 Conversion                                                                                             Figure 6. Shutdown Current vs Temperature
+                                      per Second)
+                                               40                                                                                                            90
+                                                                 V+ = 1.4 V                                                                                                   TTa = ±55ƒC
+                                                                                                                                                                                A = ±55ƒC
+                                               38                V+ = 1.8 V                                                                                  80
+                                                                                                                                                                                A =
+                                                                                                                                                                              TTa = +25ƒC
+                                                                                                                                                                                    +25ƒC
+                                               36                V+ = 3.6 V                                                                                  70               TTa   +125ƒC
+                                                                                                                                                                                  = +125ƒC
+                                                                                                                                                                                A =
+                        Conversion Time (ms)
+
+
+
+
+                                               34
+                                                                                                                                                             60
+                                               32
+                                                                                                                                                  IQ ( A)
+
+
+
+
+                                                                                                                                                             50
+                                               30
+                                                                                                                                                             40
+                                               28
+                                                                                                                                                             30
+                                               26
+                                               24                                                                                                            20
+
+                                               22                                                                                                            10
+
+                                               20                                                                                                             0
+                                                     ±50             0              50           100          150                                               1k
+                                                                                                                                                               1000               10k             100k           1M             10M
+                                                                              Temperature (ƒC)                 C003                                                                      Bus Frequency (Hz)                       C004
+
+
+
+
+                                                       Figure 7. Conversion Time vs Temperature                                                                   Figure 8. Quiescent Current vs Bus Frequency
+                                               1.0                                                                                                           1
+                                                                  Mean ± 31
+                                               0.8                Mean                                                                                 0.8
+                                               0.6                Mean + 31                                                                            0.6
+     Temperature Error (ƒC)
+
+
+
+
+                                                                                                                         Temperature Error (qC)
+
+
+
+
+                                               0.4                                                                                                     0.4
+                                               0.2                                                                                                     0.2
+                                               0.0                                                                                                           0
+                                   ±0.2                                                                                                             -0.2
+                                   ±0.4                                                                                                             -0.4
+                                   ±0.6                                                                                                             -0.6                                                              Average
+                                   ±0.8                                                                                                                                                                                3Sigma
+                                                                                                                                                    -0.8
+                                                                                                                                                                                                                      +3Sigma
+                                   ±1.0
+                                                                                                                                                             -1
+                                                     ±50   ±25       0        25    50     75    100    125   150                                              -50      -25      0       25    50      75      100    125     150
+                                                                              Temperature (ƒC)                 C005                                                                      Temperature (qC)                       D001
+
+
+
+
+                                                       Figure 9. Temperature Error vs Temperature                                                                       Figure 10. Temperature Error at +25°C
+
+
+
+
+8                                Submit Documentation Feedback                                                                                                                Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                                                                       Product Folder Links: TMP108
+                                                                                                                                       TMP108
+www.ti.com                                                                                         SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+7 Detailed Description
+
+7.1 Overview
+The TMP108 is a digital temperature sensor optimal for thermal management and thermal protection
+applications. The TMP108 is two-wire and SMBus Interface compatible, and is specified over a temperature
+range of –40°C to +125°C.
+The TMP108 temperature sensor is the chip itself. The solder bumps provide the primary thermal path as a result
+of the lower thermal resistance of metal. The temperature sensor result is equivalent to the local temperature of
+the printed-circuit board (PCB) on which the sensor is mounted.
+
+7.2 Functional Block Diagram
+
+                                                                         TMP108
+
+                                                                Diode
+                                                        A1                         Control    A2
+                                                V+               Temp                                 GND
+                                                                                    Logic
+                                                                Sensor
+
+
+
+
+                                                        B1        DS                Serial    B2
+                                                A0                                                    SCL
+                                                                 ADC              Interface
+
+
+
+
+                                                                                    Config
+                                                        C1                                    C2
+                                            ALERT                OSC              and Temp            SDA
+                                                                                   Register
+
+
+
+
+7.3 Feature Description
+7.3.1 Serial Interface
+The TMP108 operates as a slave device only on the two-wire bus and SMBus. Connections to the bus are made
+using the open-drain I/O lines, SDA and SCL. The SDA and SCL pins feature integrated spike-suppression filters
+and Schmitt triggers to minimize the effects of input spikes and bus noise. The TMP108 supports the
+transmission protocol for both fast (1 kHz to 400 kHz) and high-speed (1 kHz to 3.4 MHz) modes. All data bytes
+are transmitted MSB first.
+
+7.3.2 Serial Bus Address
+To communicate with the TMP108, the master must first communicate with slave devices using a slave address
+byte. The slave address byte consists of seven address bits, and a direction bit indicating the intent of executing
+either a read or write operation. The TMP108 features an address pin that allows up to four devices to be
+addressed on a single bus. The TMP108 latches the status of the address pin at the start of a communication.
+Table 2 describes the pin logic levels and the corresponding address values. Other values for the fixed address
+bits are available by request.
+
+                                            Table 2. Address Pin and Slave Addresses
+                                         DEVICE TWO-WIRE ADDRESS
+                                                                                                        A0 PIN CONNECTION
+                             TMP108
+                             1001000                                                                            Ground
+                             1001001                                                                              V+
+                             1001010                                                                              SDA
+                             1001011                                                                              SCL
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                                       Submit Documentation Feedback      9
+                                                             Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                          www.ti.com
+
+
+7.3.3 Bus Overview
+The device that initiates the transfer is called a master, and the devices controlled by the master are slaves. The
+bus must be controlled by a master device that generates the serial clock (SCL), controls the bus access, and
+generates the start and stop conditions.
+To address a specific device, initiate a start condition by pulling the data line (SDA) from a high to a low logic
+level while SCL is high. All slaves on the bus shift in the slave address byte, and the last bit indicates whether a
+read or write operation follows. During the ninth clock pulse, the slave being addressed responds to the master
+by generating an acknowledge bit and pulling SDA low.
+Data transfer is then initiated and sent over eight clock pulses followed by an acknowledge bit. During data
+transfer, SDA must remain stable while SCL is high because any change in SDA while SCL is high is interpreted
+as a start or stop signal.
+After all data have been transferred, the master generates a stop condition indicated by pulling SDA from low to
+high, while SCL is high.
+
+7.3.4 Writing and Reading Operation
+Accessing a particular register on the TMP108 is accomplished by writing the appropriate value to the pointer
+register. The value for the pointer register is the first byte transferred after the slave address byte with the R/W
+bit low. Every write operation to the TMP108 requires a value for the pointer register (see Figure 2).
+When reading from the TMP108, the last value stored in the pointer register by a write operation is used to
+determine which register is read by a read operation. To change the register pointer for a read operation, a new
+value must be written to the pointer register. This action is accomplished by issuing a slave address byte with the
+R/W bit low, followed by the pointer register byte. No additional data are required. The master can then generate
+a start condition and send the slave address byte with the R/W bit high to initiate the read command. See
+Figure 3 for details of this sequence. If repeated reads from the same register are desired, it is not necessary to
+continually send the pointer register bytes because the TMP108 stores the pointer register value until it is
+changed by the next write operation.
+Note that register bytes are sent with the most significant byte first, followed by the least significant byte.
+
+7.3.5 Slave Mode Operations
+The TMP108 can operate as a slave receiver or slave transmitter.
+
+7.3.5.1 Slave Receiver Mode:
+The first byte transmitted by the master is the slave address, with the R/W bit low. The TMP108 then
+acknowledges reception of a valid address. The next byte transmitted by the master is the pointer register. The
+TMP108 then acknowledges reception of the pointer register byte. The next byte or bytes are written to the
+register addressed by the pointer register. The TMP108 acknowledges reception of each data byte. The master
+can terminate data transfer by generating a start or stop condition.
+
+7.3.5.2 Slave Transmitter Mode:
+The first byte transmitted by the master is the slave address, with the R/W bit high. The slave acknowledges
+reception of a valid slave address. The next byte is transmitted by the slave and is the most significant byte of
+the register indicated by the pointer register. The master acknowledges reception of the data byte. The next byte
+transmitted by the slave is the least significant byte. The master acknowledges reception of the data byte. The
+master can terminate data transfer by generating a not-acknowledge bit on reception of any data byte, or by
+generating a start or stop condition.
+
+7.3.6 SMBus Alert Function
+The TMP108 supports the SMBus alert function. When the TMP108 operates in interrupt mode (TM = 1), the
+ALERT pin may be connected as an SMBus alert signal. When a master senses that an alert condition is present
+on the ALERT line, the master sends an SMBus alert command (00011001) to the bus. If the ALERT pin is
+active, the device acknowledges the SMBus alert command and responds by returning its slave address on the
+SDA line. The eighth bit (LSB) of the slave address byte indicates whether the alert condition is caused by the
+temperature exceeding THIGH or falling below TLOW. The LSB is high if the temperature is greater than THIGH, or
+low if the temperature is less than TLOW. See Figure 4 for details of this sequence.
+10     Submit Documentation Feedback                                            Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                 Product Folder Links: TMP108
+                                                                                                                           TMP108
+www.ti.com                                                                             SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+If multiple devices on the bus respond to the SMBus alert command, arbitration during the slave address portion
+of the SMBus alert command determines which device clears its alert status first. If the TMP108 wins the
+arbitration, its ALERT pin becomes inactive at the completion of the SMBus alert command. If the TMP108 loses
+the arbitration, its ALERT pin remains active.
+
+7.3.7 General Call
+The TMP108 responds to a two-wire general call address (0000000) if the eighth bit is 0. The device
+acknowledges the general call address and responds to commands in the second byte. If the second byte is
+00000100, the TMP108 latches the status of the address pin, but does not reset. If the second byte is 00000110,
+the TMP108 internal registers are reset to power-up values. The TMP108 does not support the general address
+acquire command.
+
+7.3.8 High-Speed (Hs) Mode
+In order for the two-wire bus to operate at frequencies above 400 kHz, the master device must issue an SMBus
+Hs-mode master code (00001xxx) as the first byte after a start condition to switch the bus to high-speed
+operation. The TMP108 does not acknowledge this byte, but does switch its input filters on SDA and SCL and its
+output filters on SDA to operate in Hs-mode, allowing transfers at up to 3.4 MHz. After the Hs-mode master code
+has been issued, the master transmits a two-wire slave address to initiate a data-transfer operation. The bus
+continues to operate in Hs-mode until a stop condition occurs on the bus. Upon receiving the stop condition, the
+TMP108 switches the input and output filters back to fast-mode operation.
+
+7.3.9 Timeout Function
+The TMP108 resets the serial interface if SCL or SDA are held low for 28 ms (typical) between a start and stop
+condition. If the TMP108 is pulled low, it releases the bus and then waits for a start condition. To avoid activating
+the timeout function, it is necessary to maintain a communication speed of at least 1 kHz for the SCL operating
+frequency.
+
+7.4 Device Functional Modes
+The mode bits, M1 and M0, can be set to three different modes: shutdown, one-shot, or continuous conversion.
+
+7.4.1 Shutdown Mode (M1 = 0, M0 = 0)
+Shutdown mode saves power by shutting down all device circuitry other than the serial interface, thus reducing
+current consumption to typically less than 0.5 μA. Shutdown mode is enabled when M1 and M0 = 00. The device
+shuts down when current conversion is completed.
+
+7.4.2 One-Shot Mode (M1 = 0, M0 = 1)
+The TMP108 features a one-shot temperature measurement mode. When the device is in shutdown mode,
+writing a ‘01’ to the M1 and M0 bits starts a single temperature conversion. During the conversion, the M1 and
+M0 bits reads 01. The device returns to the shutdown state at the completion of the single conversion. After the
+conversion, the M1 and M0 bits read 00. This feature is useful for reducing the power consumption of the
+TMP108 when continuous temperature monitoring is not required.
+As a result of the short conversion time, the TMP108 can achieve a higher conversion rate. A single conversion
+typically takes 27 ms and a read can take place in less than 20 μs. However, when using one-shot mode, 30 or
+more conversions per second are possible.
+
+7.4.3 Continuous Conversion Mode (M1 = 1)
+When the TMP108 is in continuous conversion mode (M1 = 1), a single conversion is performed at a rate
+determined by the conversion rate bits (CR1 and CR0 in the configuration register). The TMP108 performs a
+single conversion, and then goes in standby and waits for the appropriate delay set by the CR1 and CR0 bits.
+See Table 10 for CR1 and CR0 settings.
+
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                         Submit Documentation Feedback       11
+                                                        Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                    www.ti.com
+
+
+7.5 Programming
+7.5.1 Pointer Register
+Figure 11 shows the internal register structure of the TMP108. Use the 8-bit pointer register to address a given
+data register. The pointer register uses the two LSBs (see Table 12) to identify which of the data registers
+respond to a read or write command. Table 3 identifies the bits of the pointer register byte. Table 4 describes the
+pointer address of the registers available in the TMP108. The power-up reset value of the P1 and P0 bits is 00.
+
+                                                            Pointer
+                                                            Register
+
+
+
+
+                                              Temperature
+                                                Register
+
+
+                                                                                                SCL
+                                              Configuration
+                                                Register
+                                                                            I/O
+                                                                          Control
+                                                                         Interface
+                                                  TLOW
+                                                 Register
+                                                                                                SDA
+
+
+                                                 THIGH
+                                                 Register
+
+
+                                            Figure 11. Internal Register Structure
+
+
+                                                  Table 3. Pointer Register Byte
+      P7               P6              P5                     P4             P3                 P2               P1                   P0
+       0               0               0                       0              0                  0                    Register Bits
+
+
+                                                   Table 4. Pointer Addresses
+                      P1               P0                                            REGISTER
+                       0               0            Temperature register (read only, default)
+                       0               1            Configuration register (read/write)
+                       1               0            TLOW register (read/write)
+                       1               1            THIGH register (read/write)
+
+7.5.2 Temperature Register
+The temperature register is configured as a 12-bit, read-only register that stores the output of the most recent
+conversion. Two bytes must be read to obtain data, as shown in Table 5 and Table 6. Note that byte 1 is the
+most significant byte, followed by byte 2, the least significant byte. The first 12 bits are used to indicate
+temperature. There is no requirement to read the least significant byte if that information is not needed (for
+example, for resolution lower than 1°C). Table 7 summarizes the temperature data format. One LSB equals
+0.0625°C. Negative numbers are represented in binary twos complement format. Following power-up or reset,
+the temperature register reads 0°C until the first conversion is complete. The unused bits in the temperature
+register always read 0.
+
+                                           Table 5. Byte 1 of Temperature Register
+      D7              D6               D5                     D4             D3                 D2               D1                   D0
+      T11             T10              T9                     T8             T7                 T6               T5                   T4
+
+
+
+
+12     Submit Documentation Feedback                                                      Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                      Product Folder Links: TMP108
+                                                                                                                                 TMP108
+www.ti.com                                                                                   SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+                                                  Table 6. Byte 2 of Temperature Register
+        D7                   D6              D5                D4              D3                D2              D1              D0
+        T3                   T2              T1                T0                 0               0               0               0
+
+
+                                                   Table 7. Temperature Data Format (1)
+                                                                                      DIGITAL OUTPUT
+                 TEMPERATURE (°C)
+                                                                    BINARY                                            HEX
+                       128                                       0111 1111 1111                                       7FF
+                     127.9375                                    0111 1111 1111                                       7FF
+                       100                                       0110 0100 0000                                       640
+                        80                                       0101 0000 0000                                       500
+                        75                                       0100 1011 0000                                       4B0
+                        50                                       0011 0010 0000                                       320
+                        25                                       0001 1001 0000                                       190
+                       0.25                                      0000 0000 0100                                       004
+                        0                                        0000 0000 0000                                       000
+                      –0.25                                      1111 1111 1100                                       FFC
+                       –25                                       1110 0111 0000                                       E70
+                       –55                                       1100 1001 0000                                       C90
+
+(1)   The temperature sensor ADC resolution is 0.0625°C/count.
+
+Table 7 does not supply a full list of all temperatures. Use the following rules to obtain the digital data format for
+a given temperature.
+To convert positive temperatures to a digital data format:
+    Divide the temperature by the resolution. Then, convert the result to binary code with a 12-bit, left-justified
+    format, and MSB = 0 to denote a positive sign.
+    Example: (+50°C)/(0.0625°C/count) = 800 = 320h = 0011 0010 0000
+To convert negative temperatures to a digital data format:
+    Divide the absolute value of the temperature by the resolution, and convert the result to binary code with a
+    12-bit, left-justified format. Then, generate the twos complement of the result by complementing the binary
+    number and adding one. Denote a negative number with MSB = 1.
+    Example: (|–25°C|)/(0.0625°C/count) = 400 = 190h = 0001 1001 0000
+    Twos complement format: 1110 0110 1111 + 1 = 1110 0111 0000
+
+7.5.3 Configuration Register
+The configuration register is a 16-bit read and write register used to store bits that control the operational modes
+of the temperature sensor. Read and write operations are performed MSB first. The format and power-up (reset)
+default value of the configuration register is shown in Table 8, followed by an explanation of the register bits.
+Other options for the default values are available by request.
+
+                                        Table 8. Configuration and Power-Up/Reset Format
+        BYTE                  D7             D6            D5            D4             D3              D2             D1         D0
+                                  ID        CR1           CR0            FH             FL              TM             M1         M0
+             1
+                                  0           0            1              0             0                0             1              0
+                              POL             0           HYS1          HYS0            0                0             0              0
+             2
+                                  0           0            0              1             0                0             0              0
+
+
+7.5.3.1 Hysteresis Control (HYS1 and HYS0)
+When operating in comparator mode, the hysteresis control bits (HYS1 and HYS0) configure the hysteresis for
+the limit comparison of the TMP108 to 0°C, 1°C, 2°C, or 4°C. The default hysteresis is 1°C. Table 9 shows the
+settings for HYS1 and HYS0.
+Copyright © 2013–2019, Texas Instruments Incorporated                                                 Submit Documentation Feedback       13
+                                                         Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                www.ti.com
+
+
+                                                 Table 9. Hysteresis Settings
+             HYS1                            HYS0                                            HYSTERESIS
+                0                                0                                                 0°C
+                0                                1                                            1°C (default)
+                1                                0                                                 2°C
+                1                                1                                                 4°C
+
+
+7.5.3.2 Polarity (POL)
+The polarity of the ALERT pin can be programmed using the POL bit. If POL = 0 (default), the ALERT is active
+low. For POL = 1, the ALERT pin is active high, and the state of the ALERT pin is inverted.
+
+7.5.3.3 Thermostat Mode (TM)
+The thermostat mode bit indicates to the device whether to operate in comparator mode (TM = 0, default) or
+interrupt mode (TM = 1). For more information on comparator and interrupt modes, see the High- and Low-Limit
+Registers section.
+
+7.5.3.4 Temperature Watchdog Flags (FL and FH)
+The TMP108 uses temperature watchdog flags in the configuration register that indicate the result of comparing
+the device temperature at the end of every conversion to the values stored in the temperature limit registers
+(THIGH and TLOW). If the temperature of the TMP108 exceeds the value in the THIGH register, then the flag-high bit
+(FH) in the configuration register is set to 1. If the temperature falls below the value in the TLOW register, then the
+flag-low bit (FL) is set to 1. If both flag bits remain 0, then the temperature is within the temperature range set by
+the temperature limit registers. In interrupt mode, when any of the flags is set by an under- or overtemperature
+event, the SMBus ALERT Response only clears the pin and not the flags. Reading the configuration register
+clears both the flags and the pin.
+
+7.5.3.5 Conversion Rate
+The conversion rate bits, CR1 and CR0, configure the TMP108 for conversion rates of 0.25 Hz, 1 Hz, 4 Hz, or 16
+Hz. The default rate is 1 Hz. The TMP108 has a typical conversion time of 27 ms. To achieve different
+conversion rates, the TMP108 makes a conversion, and then powers down and waits for the appropriate delay
+set by CR1 and CR0. Table 10 shows the settings for CR1 and CR0.
+
+                                            Table 10. Conversion Rate Settings
+          CR1                       CR0                              CONVERSION RATE                                   IQ (TYP)
+            0                          0                                    0.25 Hz                                      1 μA
+            0                          1                                 1 Hz (default)                                  2 μA
+            1                          0                                     4 Hz                                        5 μA
+            1                          1                                     16 Hz                                      18 μA
+
+
+
+
+14     Submit Documentation Feedback                                                  Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                     Product Folder Links: TMP108
+                                                                                                                                            TMP108
+www.ti.com                                                                                              SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+After power-up or a general-call reset, the TMP108 immediately starts a conversion, as shown in Figure 12. The
+first result is available after 27 ms (typical). The active quiescent current during conversion is 40 μA (typical at
++25°C). The quiescent current during delay is 0.7 μA (typical at +25°C).
+
+
+
+                                                        (1)                                (1)
+                                                Delay                              Delay
+
+
+
+
+                                             27 ms
+
+                                                                               27 ms
+
+                                                                                                                27 ms
+
+
+
+
+                             Startup                            Start of                          Start of
+                                                               Conversion                        Conversion
+       (1)   Delay is set by the CR1 and CR0 bits in the configuration register.
+
+                                                              Figure 12. Conversion Start
+
+7.5.4 High- and Low-Limit Registers
+In comparator mode (TM = 0), the ALERT pin becomes active when the temperature exceeds the value in the
+THIGH register or drops below the value in the TLOW register. The ALERT pin remains active until the temperature
+returns to a value that is within the range set by:
+       (TLOW + HYS) and (THIGH – HYS)
+       where
+             •    HYS is the hysteresis set by the hysteresis control bits (HYS1 and HYS0).                                                        (1)
+In interrupt mode (TM = 1), the ALERT pin becomes active when the temperature exceeds the value in the THIGH
+register or drops below the value in the TLOW register, and remains active until a read operation of the
+configuration register occurs (also clears the values latched in the watchdog flags, FL and FH), or the device
+successfully responds to the SMBus alert response address. The ALERT pin is also cleared by resetting the
+device with the general call reset command.
+Both operational modes are represented in Figure 13 and Figure 14.
+Table 11 and Table 12 describe the format for the THIGH and TLOW registers. Note that the most significant byte is
+sent first, followed by the least significant byte. Power-up (reset) default values are THIGH = +127.9375°C
+(0x7FF8) and TLOW = –128°C (0x8000). These values ensure that upon power-up, the limit window is set to
+maximum, and the ALERT pin does not become active until the desired limit values are programmed in the
+registers. Other default values for the temperature limits are available by request. The format of the data for
+THIGH and TLOW is the same as for the temperature register.
+
+                                                Table 11. Bytes 1 and 2 of THIGH Register
+     BYTE              D7               D6                     D5            D4                   D3            D2             D1            D0
+       1               H11             H10                     H9            H8                   H7            H6             H5            H4
+
+     BYTE              D7               D6                     D5            D4                   D3            D2             D1            D0
+       2               H3               H2                     H1            H0                    0             0              0              0
+
+
+                                                Table 12. Bytes 1 and 2 of TLOW Register
+     BYTE              D7               D6                     D5            D4                   D3            D2             D1            D0
+       1               L11              L10                    L9             L8                   L7            L6            L5            L4
+
+     BYTE              D7               D6                     D5            D4                   D3            D2             D1            D0
+       2               L3               L2                     L1             L0                   0             0              0              0
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                                          Submit Documentation Feedback       15
+                                                                 Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                        www.ti.com
+
+
+
+                                                                                   THIGH
+          Measured
+        Temperature                                                                TLOW
+
+
+
+
+                 ALERT
+               (POL = 0)
+
+
+
+                      FL
+
+
+
+                      FH
+
+
+
+                    Time
+
+
+                                              (1)   (1)                      (1)   (1)             (1)   (1)           (1)
+        (1)    Update THIGH and TLOW limit. Read the configuration register to clear the flags and the ALERT pin.
+
+                                                          Figure 13. Interrupt Mode
+
+
+         THIGH
+                                                                                                                                     THIGH ± HYS
+  Measured
+Temperature
+                                                                                                                                     TLOW + HYS
+         TLOW
+
+
+
+
+       ALERT
+     (POL = 0)
+
+
+              FL
+
+
+
+              FH
+
+
+         Time
+
+                                                      Figure 14. Comparator Mode
+
+
+
+
+16       Submit Documentation Feedback                                                        Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                           Product Folder Links: TMP108
+                                                                                                                                 TMP108
+www.ti.com                                                                                   SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+8 Application and Implementation
+
+                                                           NOTE
+               Information in the following applications sections is not part of the TI component
+               specification, and TI does not warrant its accuracy or completeness. TI’s customers are
+               responsible for determining suitability of components for their purposes. Customers should
+               validate and test their design implementation to confirm system functionality.
+
+
+8.1 Application Information
+The TMP108 is used to measure the temperature of the board location where the device is mounted. The
+programmable address options allow up to four locations on the board to be monitored with a single serial bus.
+
+8.2 Typical Application
+                                            1.4 V to 3.6 V                         V+
+
+
+
+
+                                                        A1
+                                      TMP108            V+
+                                                                       B2
+                                                                 SCL
+                                                        100 kW
+                                 B1                                    C2                       Two-Wire
+                                      A0                         SDA
+                                                                                                Controller
+                                                              ALERT C1
+
+                                                   GND
+                                                         A2
+
+
+                                                   GND
+                                                Figure 15. Typical Application Circuit
+
+8.2.1 Design Requirements
+The TMP108 only requires pullup resistors on SCL and SDA, but TI also recommends to use a 0.01-μF bypass
+capacitor as shown in Figure 15. There is an internal 100-kΩ pullup resistor connected to supply on the ALERT
+pin. If required, use an external resistor of smaller value on the ALERT pin for a stronger pullup to V+. The SCL
+and SDA lines can be pulled up to a supply that is equal to or higher than V+ through the pullup resistors. To
+configure one of four different addresses on the bus, connect A0 to either V+, GND, SCL, or SDA. If A0 is
+connected to SCL or SDA, make their pullup supply equal to V+.
+
+8.2.2 Detailed Design Procedure
+The TMP108 devices must be placed in close proximity to the heat source that must be monitored, with a proper
+layout for good thermal coupling. This placement ensures that temperature changes are captured within the
+shortest possible time interval. To maintain accuracy in applications that require air or surface temperature
+measurement, take care to isolate the package and leads from PCB heat sources.
+
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                               Submit Documentation Feedback       17
+                                                              Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                                                                                             www.ti.com
+
+
+Typical Application (continued)
+8.2.3 Application Curves
+Figure 16 shows the step response of the TMP108 device to a submersion in an oil bath of 100°C from room
+temperature (25°C.) The time constant, or the time for the output to reach 63% of the input step, is about 1
+second. Figure 17 shows the step response of the TMP108 device to an insertion in an air chamber of 100°C
+from room temperature (25°C.) The time-constant is 68 seconds. The time-constant result depends on the
+printed-circuit board (PCB) that the TMP108 device is mounted. For this test, the PCB is 0.5 in × 0.5 in, and the
+PCB thickness is 32 mils.
+
+                    100                                                                                                               110
+                                     W                                                                                                               Thermal Time Constant (W) = 68.0028 seconds
+                     95
+                                                                                                                                      100
+                     90
+                     85
+                                                                                                                                      90
+                     80
+                     75
+ Temperature (°C)
+
+
+
+
+                                                                                                                                      80
+
+
+
+
+                                                                                                                   Temperature (°C)
+                     70
+                     65                                                                                                               70
+
+                     60
+                                                                                                                                      60
+                     55
+                     50                                                                                                               50
+                     45
+                     40                                                                                                               40
+
+                     35
+                                                                                                                                      30
+                     30
+                     25                                                                                                               20
+                          0    0.5   1    1.5   2   2.5   3   3.5   4   4.5   5   5.5   6   6.5   7   7.5   8                               0   50       100    150     200     250      300   350   400    450   500
+                                                               Time (s)                                     sbos                                                              Time (s)                             sbos
+                                         Figure 16. Moving Oil Thermal Response                                                                          Figure 17. Still Air Thermal Response
+
+
+
+9 Power Supply Recommendations
+The TMP108 operates on a power supply range from 1.4 V to 3.6 V. A power-supply bypass capacitor is
+required, which must be placed as close to the supply and ground pins of the device as possible. A typical supply
+bypass capacitor is 100 nF.
+
+
+
+
+18                            Submit Documentation Feedback                                                                                                 Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                                                            Product Folder Links: TMP108
+                                                                                                                            TMP108
+www.ti.com                                                                              SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019
+
+
+10 Layout
+
+10.1 Layout Guidelines
+Place the power-supply bypass capacitor as close as possible to the supply and ground pins. The recommended
+value of this bypass capacitor is 0.01 μF. Additional decoupling capacitance can be added to compensate for
+noisy or high-impedance power supplies. Pull up the open-drain output pins (SDA , SCL and ALERT) through 5-
+kΩ pullup resistors.
+
+10.2 Layout Example
+
+                                                                                           WCSP Ball
+
+                                                                                          Via to Power/Ground Plane
+                                                                                          Via to Internal Plane
+
+
+                                                                                          Internal Layer Trace
+                                                                                          Top/Bottom Layer Trace
+
+                                                             TMP108
+                                                             Top View
+
+
+                                                             V+             GND
+
+                                                                                                5k      5k
+                                          0.1 µF
+
+                                                             A0             SCL
+
+
+                                                                                                                  I2C Bus
+                                          5k
+                                                           ALERT            SDA
+
+             MCU INT
+
+
+                                                        Figure 18. TMP108 Layout
+
+
+
+
+Copyright © 2013–2019, Texas Instruments Incorporated                                          Submit Documentation Feedback       19
+                                                         Product Folder Links: TMP108
+TMP108
+SBOS663A – APRIL 2013 – REVISED SEPTEMBER 2019                                                                                 www.ti.com
+
+
+11 Device and Documentation Support
+
+11.1 Receiving Notification of Documentation Updates
+To receive notification of documentation updates, navigate to the device product folder on ti.com. In the upper
+right corner, click on Alert me to register and receive a weekly digest of any product information that has
+changed. For change details, review the revision history included in any revised document.
+
+11.2 Support Resources
+TI E2E™ support forums are an engineer's go-to source for fast, verified answers and design help — straight
+from the experts. Search existing answers or ask your own question to get the quick design help you need.
+Linked content is provided "AS IS" by the respective contributors. They do not constitute TI specifications and do
+not necessarily reflect TI's views; see TI's Terms of Use.
+
+11.3 Trademarks
+E2E is a trademark of Texas Instruments.
+All other trademarks are the property of their respective owners.
+11.4 Electrostatic Discharge Caution
+         This integrated circuit can be damaged by ESD. Texas Instruments recommends that all integrated circuits be handled with
+         appropriate precautions. Failure to observe proper handling and installation procedures can cause damage.
+         ESD damage can range from subtle performance degradation to complete device failure. Precision integrated circuits may be more
+         susceptible to damage because very small parametric changes could cause the device not to meet its published specifications.
+
+11.5 Glossary
+SLYZ022 — TI Glossary.
+   This glossary lists and explains terms, acronyms, and definitions.
+
+12 Mechanical, Packaging, and Orderable Information
+The following pages include mechanical, packaging, and orderable information. This information is the most
+current data available for the designated devices. This data is subject to change without notice and revision of
+this document. For browser-based versions of this data sheet, refer to the left-hand navigation.
+
+
+
+
+20     Submit Documentation Feedback                                                   Copyright © 2013–2019, Texas Instruments Incorporated
+
+                                                    Product Folder Links: TMP108
+                                                                                                                                                                      PACKAGE OPTION ADDENDUM
+
+       www.ti.com                                                                                                                                                                                                   13-May-2026
+
+
+
+
+PACKAGING INFORMATION
+
+       Orderable part number          Status     Material type      Package | Pins      Package qty | Carrier        RoHS             Lead finish/              MSL rating/               Op temp (°C)          Part marking
+                                        (1)            (2)                                                             (3)            Ball material             Peak reflow                                           (6)
+                                                                                                                                            (4)                      (5)
+
+           TMP108AIYFFR               Active      Production       DSBGA (YFF) | 6       3000 | LARGE T&R             Yes               SNAGCU             Level-1-260C-UNLIM              -40 to 125                 T8
+          TMP108AIYFFR.B              Active      Production       DSBGA (YFF) | 6       3000 | LARGE T&R             Yes               SNAGCU             Level-1-260C-UNLIM              -40 to 125                 T8
+
+(1)
+      Status: For more details on status, see our product life cycle.
+
+(2)
+   Material type: When designated, preproduction parts are prototypes/experimental devices, and are not yet approved or released for full production. Testing and final process, including without limitation quality assurance,
+reliability performance testing, and/or process qualification, may not yet be complete, and this item is subject to further changes or possible discontinuation. If available for ordering, purchases will be subject to an additional
+waiver at checkout, and are intended for early internal evaluation purposes only. These items are sold without warranties of any kind.
+
+(3)
+      RoHS values: Yes, No, RoHS Exempt. See the TI RoHS Statement for additional information and value definition.
+
+(4)
+   Lead finish/Ball material: Parts may have multiple material finish options. Finish options are separated by a vertical ruled line. Lead finish/Ball material values may wrap to two lines if the finish value exceeds the maximum
+column width.
+
+(5)
+  MSL rating/Peak reflow: The moisture sensitivity level ratings and peak solder (reflow) temperatures. In the event that a part has multiple moisture sensitivity ratings, only the lowest level per JEDEC standards is shown.
+Refer to the shipping label for the actual reflow temperature that will be used to mount the part to the printed circuit board.
+
+(6)
+      Part marking: There may be an additional marking, which relates to the logo, the lot trace code information, or the environmental category of the part.
+
+Multiple part markings will be inside parentheses. Only one part marking contained in parentheses and separated by a "~" will appear on a part. If a line is indented then it is a continuation of the previous line and the two
+combined represent the entire part marking for that device.
+
+Important Information and Disclaimer:The information provided on this page represents TI's knowledge and belief as of the date that it is provided. TI bases its knowledge and belief on information provided by third parties, and
+makes no representation or warranty as to the accuracy of such information. Efforts are underway to better integrate information from third parties. TI has taken and continues to take reasonable steps to provide representative
+and accurate information but may not have conducted destructive testing or chemical analysis on incoming materials and chemicals. TI and TI suppliers consider certain information to be proprietary, and thus CAS numbers
+and other limited information may not be available for release.
+
+In no event shall TI's liability arising out of such information exceed the total purchase price of the TI part(s) at issue in this document sold by TI to Customer on an annual basis.
+
+
+
+
+                                                                                                          Addendum-Page 1
+                                                                              PACKAGE MATERIALS INFORMATION
+
+www.ti.com                                                                                                                                         16-Jan-2026
+
+
+
+TAPE AND REEL INFORMATION
+
+       REEL DIMENSIONS                                                                     TAPE DIMENSIONS
+                                                                                      K0         P1
+
+
+
+                                                                                                                        B0 W
+                                        Reel
+                                      Diameter
+                                                                                   Cavity             A0
+                                                               A0   Dimension designed to accommodate the component width
+                                                               B0   Dimension designed to accommodate the component length
+                                                               K0   Dimension designed to accommodate the component thickness
+                                                               W    Overall width of the carrier tape
+                                                               P1   Pitch between successive cavity centers
+
+
+                                       Reel Width (W1)
+                              QUADRANT ASSIGNMENTS FOR PIN 1 ORIENTATION IN TAPE
+
+                                                                                                       Sprocket Holes
+
+
+                                                 Q1       Q2          Q1    Q2
+
+                                                 Q3       Q4          Q3    Q4                    User Direction of Feed
+
+
+
+                                                           Pocket Quadrants
+
+
+*All dimensions are nominal
+             Device           Package Package Pins             SPQ       Reel   Reel   A0                     B0         K0     P1     W     Pin1
+                               Type Drawing                            Diameter Width (mm)                   (mm)       (mm)   (mm)   (mm) Quadrant
+                                                                         (mm) W1 (mm)
+     TMP108AIYFFR             DSBGA      YFF          6        3000        180.0           8.4        0.89   1.29       0.69   4.0    8.0     Q1
+
+
+
+
+                                                                     Pack Materials-Page 1
+                                                                PACKAGE MATERIALS INFORMATION
+
+www.ti.com                                                                                                              16-Jan-2026
+
+
+
+ TAPE AND REEL BOX DIMENSIONS
+
+
+
+
+                                                               Width (mm)
+                                                                              H
+                      W
+
+
+
+
+                                                          L
+
+
+
+
+*All dimensions are nominal
+             Device           Package Type   Package Drawing   Pins         SPQ    Length (mm)   Width (mm)   Height (mm)
+      TMP108AIYFFR              DSBGA             YFF           6           3000      182.0        182.0         20.0
+
+
+
+
+                                                        Pack Materials-Page 2
+                                                                                                           PACKAGE OUTLINE
+YFF0006                                                          SCALE 10.500
+                                                                                                  DSBGA - 0.625 mm max height
+                                                                                                                  DIE SIZE BALL GRID ARRAY
+
+
+
+
+                                          B              E                            A
+
+
+
+
+                                 BALL A1
+                                CORNER
+
+                                                                                      D
+
+
+
+
+                             0.625 MAX
+                                                                                             C
+
+                                                                                                 SEATING PLANE
+                                   0.30
+                                   0.12                   BALL TYP                               0.05 C
+
+
+
+
+                                                       0.4 TYP
+
+
+                                               C
+
+
+
+                            0.8                B                                   SYMM
+                                                                                                     D: Max = 1.216 mm, Min =1.156 mm
+                            TYP
+                                   0.4 TYP                                                           E: Max = 0.816 mm, Min =0.756 mm
+
+                                               A
+                                        0.3
+                                  6X               1             2
+                                        0.2
+                                                       SYMM
+                          0.015        C A B
+
+
+
+
+                                                                                                                          4223785/A 06/2017
+
+NOTES:
+
+1. All linear dimensions are in millimeters. Any dimensions in parenthesis are for reference only. Dimensioning and tolerancing
+   per ASME Y14.5M.
+2. This drawing is subject to change without notice.
+
+
+
+
+                                                                                www.ti.com
+                                                                                   EXAMPLE BOARD LAYOUT
+YFF0006                                                                                  DSBGA - 0.625 mm max height
+                                                                                                         DIE SIZE BALL GRID ARRAY
+
+
+
+
+                                                                             (0.4) TYP
+                                           6X ( 0.23)
+                                                                1        2
+                                                           A
+
+                                               (0.4) TYP
+                                                                               SYMM
+                                                           B
+
+
+                                                           C
+
+
+                                                                SYMM
+
+
+
+                                                 LAND PATTERN EXAMPLE
+                                                     EXPOSED METAL SHOWN
+                                                          SCALE:30X
+
+
+
+
+                                                     0.05 MAX                                               METAL UNDER
+                      ( 0.23)                                                 0.05 MIN
+                       METAL                                                                                SOLDER MASK
+
+
+
+                                                    EXPOSED
+                                                    METAL                     EXPOSED                       ( 0.23)
+             SOLDER MASK                                                        METAL
+                 OPENING                                                                                    SOLDER MASK
+                                                                                                            OPENING
+                                NON-SOLDER MASK                                            SOLDER MASK
+                                    DEFINED                                                  DEFINED
+                                  (PREFERRED)
+
+                                                        SOLDER MASK DETAILS
+                                                                NOT TO SCALE
+
+
+
+
+                                                                                                                  4223785/A 06/2017
+NOTES: (continued)
+
+3. Final dimensions may vary due to manufacturing tolerance considerations and also routing constraints. For more information,
+   see Texas Instruments literature number SNVA009 (www.ti.com/lit/snva009).
+
+
+
+
+                                                                    www.ti.com
+                                                                                  EXAMPLE STENCIL DESIGN
+YFF0006                                                                              DSBGA - 0.625 mm max height
+                                                                                                        DIE SIZE BALL GRID ARRAY
+
+
+
+
+                                                                  (0.4) TYP
+                                            6X ( 0.25)                            (R0.05) TYP
+                                                              1           2
+                                                          A
+
+
+                                              (0.4) TYP
+                                                          B                       SYMM
+
+
+                                            METAL
+                                              TYP
+                                                          C
+
+                                                                   SYMM
+
+
+
+                                                   SOLDER PASTE EXAMPLE
+                                                  BASED ON 0.1 mm THICK STENCIL
+                                                           SCALE:35X
+
+
+
+
+                                                                                                                4223785/A 06/2017
+
+NOTES: (continued)
+
+4. Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release.
+
+
+
+
+                                                                     www.ti.com
+                                         IMPORTANT NOTICE AND DISCLAIMER
+TI PROVIDES TECHNICAL AND RELIABILITY DATA (INCLUDING DATASHEETS), DESIGN RESOURCES (INCLUDING REFERENCE
+DESIGNS), APPLICATION OR OTHER DESIGN ADVICE, WEB TOOLS, SAFETY INFORMATION, AND OTHER RESOURCES “AS IS”
+AND WITH ALL FAULTS, AND DISCLAIMS ALL WARRANTIES, EXPRESS AND IMPLIED, INCLUDING WITHOUT LIMITATION ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT OF THIRD
+PARTY INTELLECTUAL PROPERTY RIGHTS.
+These resources are intended for skilled developers designing with TI products. You are solely responsible for (1) selecting the appropriate
+TI products for your application, (2) designing, validating and testing your application, and (3) ensuring your application meets applicable
+standards, and any other safety, security, regulatory or other requirements.
+These resources are subject to change without notice. TI grants you permission to use these resources only for development of an
+application that uses the TI products described in the resource. Other reproduction and display of these resources is prohibited. No license
+is granted to any other TI intellectual property right or to any third party intellectual property right. TI disclaims responsibility for, and you fully
+indemnify TI and its representatives against any claims, damages, costs, losses, and liabilities arising out of your use of these resources.
+TI’s products are provided subject to TI’s Terms of Sale, TI’s General Quality Guidelines, or other applicable terms available either on
+ti.com or provided in conjunction with such TI products. TI’s provision of these resources does not expand or otherwise alter TI’s applicable
+warranties or warranty disclaimers for TI products. Unless TI explicitly designates a product as custom or customer-specified, TI products
+are standard, catalog, general purpose devices.
+TI objects to and rejects any additional or different terms you may propose.
+IMPORTANT NOTICE
+
+                                                Copyright © 2026, Texas Instruments Incorporated
+                                                                Last updated 10/2025
+
