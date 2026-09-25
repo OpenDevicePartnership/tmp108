@@ -53,29 +53,43 @@ impl<I> Inner<I> {
     }
     /// Temperature low register
     ///
+    /// Power-up default: TLOW = -128 °C (`0x8000`) per datasheet §7.5.4
+    /// (`sources/datasheet.txt:994`). Confirmed on silicon (#63).
+    ///
     /// Register operation:
     /// - Address: `2`
-    /// - Reset value: `0`
+    /// - Reset value: `0x8000`
     #[doc(alias = "t-low")]
     pub fn t_low(&mut self) -> ::device_driver::RegisterOperation<'_, Self, TLow, u8, ::device_driver::RW, ()>
     where
         I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
     {
         let address = self.base_address + 2;
-        ::device_driver::RegisterOperation::new(self, address as u8, TLow::default)
+        ::device_driver::RegisterOperation::new(self, address as u8, || TLow::from([0, 128]))
     }
     /// Temperature high register
     ///
+    /// Power-up default: THIGH = +127.9375 °C (`0x7FF8`) per datasheet
+    /// §7.5.4 prose (`sources/datasheet.txt:993-994`).
+    ///
+    /// Table 11 (`sources/datasheet.txt:1004`) shows byte 2's low nibble
+    /// as fixed zeros, which would imply `0x7FF0` for the same
+    /// temperature. Those two cannot both be canonical. Fresh silicon
+    /// reads back `0x7FF8` (bit 3 of the reserved nibble set) at reset,
+    /// matching the prose and not Table 11's implied value (#63).
+    /// Declare `0x7FF8` deliberately; do not "normalize" the reserved
+    /// nibble to zero.
+    ///
     /// Register operation:
     /// - Address: `3`
-    /// - Reset value: `0`
+    /// - Reset value: `0x7FF8`
     #[doc(alias = "t-high")]
     pub fn t_high(&mut self) -> ::device_driver::RegisterOperation<'_, Self, THigh, u8, ::device_driver::RW, ()>
     where
         I: ::device_driver::RegisterInterfaceBase<AddressType = u8>,
     {
         let address = self.base_address + 3;
-        ::device_driver::RegisterOperation::new(self, address as u8, THigh::default)
+        ::device_driver::RegisterOperation::new(self, address as u8, || THigh::from([248, 127]))
     }
 }
 impl<I> ::device_driver::Block for Inner<I> {

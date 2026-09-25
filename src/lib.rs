@@ -2098,7 +2098,9 @@ fn widen_pin_err<E: embedded_hal_async::i2c::Error, P: embedded_hal::digital::Er
 
 #[cfg(test)]
 mod tests {
-    use super::inner::Configuration;
+    use device_driver::Fieldset;
+
+    use super::inner::{Configuration, THigh, TLow};
     use super::*;
 
     /// A `Configuration` initialized to the chip's power-on reset
@@ -2117,10 +2119,53 @@ mod tests {
         cfg
     }
 
+    fn por_t_low() -> TLow {
+        let mut tmp = Tmp108::new_with_a0_gnd(embedded_hal_mock::eh1::i2c::Mock::new(&[]));
+        let value = tmp.inner.t_low().reset_value();
+        let mut i2c = tmp.destroy();
+        i2c.done();
+        value
+    }
+
+    fn por_t_high() -> THigh {
+        let mut tmp = Tmp108::new_with_a0_gnd(embedded_hal_mock::eh1::i2c::Mock::new(&[]));
+        let value = tmp.inner.t_high().reset_value();
+        let mut i2c = tmp.destroy();
+        i2c.done();
+        value
+    }
+
     #[test]
     fn default_configuration() {
         let cfg = por_configuration();
         assert_eq!(u16::from_le_bytes(cfg.into()), 0x1022);
+    }
+
+    /// TLOW power-up default is -128 °C (`0x8000`), not all-zeros.
+    ///
+    /// Assert against the *register-operation* reset value. Asserting
+    /// `TLow::default()` / `Fieldset::ZERO` is what let #63 through —
+    /// those stay all-zero by design in device-driver 2.x.
+    #[test]
+    fn por_t_low_matches_datasheet() {
+        let value = por_t_low();
+        assert_eq!(u16::from_le_bytes(value.into()), 0x8000);
+        assert_ne!(value, TLow::ZERO);
+        assert_eq!(u16::from_le_bytes(TLow::default().into()), 0x0000);
+    }
+
+    /// THIGH power-up default is +127.9375 °C (`0x7FF8`).
+    ///
+    /// Datasheet §7.5.4 prose and Table 11 disagree (`0x7FF8` vs an
+    /// implied `0x7FF0`). Silicon reads `0x7FF8` (reserved bit 3 set);
+    /// pin that deliberately rather than normalizing the nibble.
+    #[test]
+    fn por_t_high_matches_datasheet_and_silicon() {
+        let value = por_t_high();
+        assert_eq!(u16::from_le_bytes(value.into()), 0x7FF8);
+        assert_ne!(u16::from_le_bytes(value.into()), 0x7FF0);
+        assert_ne!(value, THigh::ZERO);
+        assert_eq!(u16::from_le_bytes(THigh::default().into()), 0x0000);
     }
 
     #[test]

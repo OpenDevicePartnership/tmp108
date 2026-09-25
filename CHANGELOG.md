@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Declare DDSL reset values for `t-low` (`0x8000`, −128 °C) and
+  `t-high` (`0x7FF8`, +127.9375 °C) so generated register-operation
+  defaults match the datasheet power-up window instead of all-zeros.
+  `0x7FF8` is chosen over Table 11's implied `0x7FF0` because fresh
+  silicon reads that value back at reset (#63).
+
 ## [0.6.0] - 2026-09-04
 
 The first release since 0.5.0, and a substantial one. It collects three

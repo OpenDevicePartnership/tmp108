@@ -70,16 +70,32 @@ device Inner {
     },
 
     /// Temperature low register
+    ///
+    /// Power-up default: TLOW = -128 °C (`0x8000`) per datasheet §7.5.4
+    /// (`sources/datasheet.txt:994`). Confirmed on silicon (#63).
     register t-low {
         address: 2,
+        reset: 0x8000,
         fields: fieldset _ {
             size-bytes: 2,
         },
     },
 
     /// Temperature high register
+    ///
+    /// Power-up default: THIGH = +127.9375 °C (`0x7FF8`) per datasheet
+    /// §7.5.4 prose (`sources/datasheet.txt:993-994`).
+    ///
+    /// Table 11 (`sources/datasheet.txt:1004`) shows byte 2's low nibble
+    /// as fixed zeros, which would imply `0x7FF0` for the same
+    /// temperature. Those two cannot both be canonical. Fresh silicon
+    /// reads back `0x7FF8` (bit 3 of the reserved nibble set) at reset,
+    /// matching the prose and not Table 11's implied value (#63).
+    /// Declare `0x7FF8` deliberately; do not "normalize" the reserved
+    /// nibble to zero.
     register t-high {
         address: 3,
+        reset: 0x7FF8,
         fields: fieldset _ {
             size-bytes: 2,
         },
