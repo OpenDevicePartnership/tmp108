@@ -130,10 +130,10 @@ available simultaneously when both relevant features are enabled.
   See `examples/alert_comparator.rs` for a demonstration.
 - **Any configuration read acknowledges, not just the waiter's.** In
   interrupt mode every read of the configuration register clears FL/FH and
-  releases the ALERT pin — including `probe()`, which looks like a liveness
-  check, `wait_for_temperature()`, which reads it only to pick a delay,
-  `configure()` and `shutdown()`, whose read-modify-write acknowledges on
-  the read half, and `set_temperature_threshold_hysteresis()`, which does it
+  releases the ALERT pin — including `wait_for_temperature()`, which reads
+  it only to pick a delay, `configure()` and `shutdown()`, whose
+  read-modify-write acknowledges on the read half, and
+  `set_temperature_threshold_hysteresis()`, which does it
   twice. A configuration *write* does not acknowledge. Only
   `read_configuration_and_acknowledge()` hands back the raw flag pair;
   `AlertTmp108::wait_for_alert()` reports them as an interpreted
