@@ -50,7 +50,6 @@
 //!
 //! | Call | Configuration reads | Why it reads |
 //! |---|---|---|
-//! | [`probe`][Tmp108::probe] | 1 | compares against the power-on reset value |
 //! | [`read_configuration`][Tmp108::read_configuration] | 1 | returns the settings |
 //! | [`read_configuration_and_acknowledge`][Tmp108::read_configuration_and_acknowledge] | 1 | returns the settings **and the flags** |
 //! | [`configure`][Tmp108::configure] | 1 | read-modify-write |
@@ -273,10 +272,6 @@ pub(crate) mod ops {
     use crate::Hysteresis;
     use crate::inner::Configuration;
     use crate::{Config, ConversionRate};
-
-    /// Documented power-on reset value of the configuration register.
-    /// Used by [`crate::Tmp108::probe`] to verify chip presence.
-    pub(crate) const POR_CONFIG: u16 = 0x1022;
 
     /// Tolerance band for snapping continuous-f32 hysteresis input
     /// to the four discrete chip settings, in °C.
@@ -1845,61 +1840,6 @@ impl<I2C: embedded_hal_async::i2c::I2c, ALERT: embedded_hal_async::digital::Wait
 }
 
 impl<I2C: I2c> Tmp108<I2C> {
-    /// Probe the chip's presence by reading the configuration register.
-    ///
-    /// The TMP108 does not expose a `WHO_AM_I` / device-ID register, so a
-    /// true identity probe is impossible. This method does the next-best
-    /// thing: it reads the configuration register and reports whether
-    /// the value matches the chip's documented power-on reset (POR)
-    /// value `0x1022`. Useful immediately after power-on to confirm the
-    /// chip is freshly out of reset and on the bus.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(true)` — the read succeeded and the configuration register
-    ///   matches the POR value. Strong evidence the chip is present and
-    ///   has not yet been reconfigured.
-    /// - `Ok(false)` — the read succeeded but the configuration differs
-    ///   from POR. Still strong evidence the chip is present (it `ACKed`
-    ///   and returned plausible register data) but it was already
-    ///   reconfigured since power-on. False negatives are unavoidable on
-    ///   any boot path where the chip was configured before this method
-    ///   ran.
-    /// - `Err(_)` — the I2C read failed. Most likely cause is that no
-    ///   chip is present at the expected address (NACK), but any bus
-    ///   error reports here as well.
-    ///
-    /// # Interrupt-mode acknowledgement
-    ///
-    /// This performs one configuration read, so in
-    /// [`Thermostat::Interrupt`] mode it clears FL/FH and releases the
-    /// ALERT pin. A liveness check is not free: calling it with an
-    /// alert pending destroys the evidence. See
-    /// [Interrupt-mode acknowledgement](crate#interrupt-mode-acknowledgement).
-    ///
-    /// # Errors
-    ///
-    /// `I2C::Error` when the I2C read fails.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// use tmp108::Tmp108;
-    /// // Chip returns the POR configuration -> probe() reports true.
-    /// let i2c = Mock::new(&[
-    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
-    /// ]);
-    /// let mut tmp = Tmp108::new_with_a0_gnd(i2c);
-    /// assert!(tmp.probe().unwrap());
-    /// # let mut i2c = tmp.destroy();
-    /// # i2c.done();
-    /// ```
-    pub fn probe(&mut self) -> Result<bool, I2C::Error> {
-        let raw = self.inner.configuration().read()?;
-        Ok(u16::from_le_bytes(raw.into()) == ops::POR_CONFIG)
-    }
-
     /// Read configuration register
     ///
     /// Returns the *configurable parameters*, not complete hardware
@@ -2472,43 +2412,6 @@ impl<I2C: I2c> Tmp108<I2C> {
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 impl<I2C: AsyncI2c> AsyncTmp108<I2C> {
-    /// Probe the chip's presence by reading the configuration register.
-    ///
-    /// See [`Tmp108::probe`] for full semantics. The async flavor has
-    /// the same `Ok(true)` / `Ok(false)` / `Err(_)` contract.
-    ///
-    /// # Interrupt-mode acknowledgement
-    ///
-    /// This performs one configuration read, so in
-    /// [`Thermostat::Interrupt`] mode it clears FL/FH and releases the
-    /// ALERT pin. A liveness check is not free: calling it with an
-    /// alert pending destroys the evidence. See
-    /// [Interrupt-mode acknowledgement](crate#interrupt-mode-acknowledgement).
-    ///
-    /// # Errors
-    ///
-    /// `I2C::Error` when the I2C read fails.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
-    /// # use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
-    /// use tmp108::AsyncTmp108;
-    /// let i2c = Mock::new(&[
-    ///     Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]),
-    /// ]);
-    /// let mut tmp = AsyncTmp108::new_with_a0_gnd(i2c);
-    /// assert!(tmp.probe().await.unwrap());
-    /// # let mut i2c = tmp.destroy();
-    /// # i2c.done();
-    /// # });
-    /// ```
-    pub async fn probe(&mut self) -> Result<bool, I2C::Error> {
-        let raw = self.inner.configuration().read_async().await?;
-        Ok(u16::from_le_bytes(raw.into()) == ops::POR_CONFIG)
-    }
-
     /// Read configuration register
     ///
     /// Returns the *configurable parameters*, not complete hardware
@@ -4728,12 +4631,21 @@ mod tests {
 
         #[test]
         fn por_config_matches_default_configuration() {
-            // ops::POR_CONFIG must match the chip's documented POR value
-            // (0x1022) and the generated configuration register's reset
-            // value. If the DDSL manifest changes the reset value,
-            // probe()'s contract changes too — this test pins it.
+            // Pins the DDSL manifest's configuration reset value against
+            // the one the datasheet documents (SBOS663A section 7.5.3,
+            // Table 8). Like the limit registers, this value is only ever
+            // observable through a `write()` whose closure changes
+            // nothing — no public method consults it — so without this
+            // test a wrong `reset:` in tmp108.ddsl would go unnoticed.
+            //
+            // It pins the MANIFEST, not a device-identity claim. The
+            // reset value is not a property of the part family: SBOS663A
+            // section 7.5.3 states "other options for the default values
+            // are available by request", and a part measured on the bench
+            // resets to 0x1026. That is why nothing in the driver
+            // compares against this value any more.
             let cfg = por_configuration();
-            assert_eq!(u16::from_le_bytes(cfg.into()), ops::POR_CONFIG);
+            assert_eq!(u16::from_le_bytes(cfg.into()), 0x1022);
         }
 
         #[test]
@@ -5471,48 +5383,6 @@ mod tests {
             mock.done();
         }
 
-        #[test]
-        fn probe_returns_true_for_por_value() {
-            // Configuration register at 0x01 returns the POR value 0x1022.
-            // The register layout is little-endian per tmp108.toml so the
-            // wire bytes are [0x22, 0x10].
-            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10])];
-            let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
-
-            assert_eq!(tmp108.probe(), Ok(true));
-
-            let mut mock = tmp108.destroy();
-            mock.done();
-        }
-
-        #[test]
-        fn probe_returns_false_for_non_por_value() {
-            // Chip is present (ACKs) but has been reconfigured.
-            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0])];
-            let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
-
-            assert_eq!(tmp108.probe(), Ok(false));
-
-            let mut mock = tmp108.destroy();
-            mock.done();
-        }
-
-        #[test]
-        fn probe_propagates_bus_error() {
-            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10]).with_error(
-                embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
-            )];
-            let mock = Mock::new(&expectations);
-            let mut tmp108 = Tmp108::new_with_a0_gnd(mock);
-
-            assert!(tmp108.probe().is_err());
-
-            let mut mock = tmp108.destroy();
-            mock.done();
-        }
-
         /// Wire-level behaviour of the supervised one-shot sequence.
         ///
         /// Every case pairs a scripted I²C mock with a scripted
@@ -6152,30 +6022,6 @@ mod tests {
                     Err(Error::InvalidInput)
                 ));
             }
-
-            let mut mock = tmp108.destroy();
-            mock.done();
-        }
-
-        #[tokio::test]
-        async fn probe_returns_true_for_por_value() {
-            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x22, 0x10])];
-            let mock = Mock::new(&expectations);
-            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
-
-            assert_eq!(tmp108.probe().await, Ok(true));
-
-            let mut mock = tmp108.destroy();
-            mock.done();
-        }
-
-        #[tokio::test]
-        async fn probe_returns_false_for_non_por_value() {
-            let expectations = vec![Transaction::write_read(0x48, vec![0x01], vec![0x66, 0xb0])];
-            let mock = Mock::new(&expectations);
-            let mut tmp108 = AsyncTmp108::new_with_a0_gnd(mock);
-
-            assert_eq!(tmp108.probe().await, Ok(false));
 
             let mut mock = tmp108.destroy();
             mock.done();
