@@ -6,6 +6,58 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/OpenDevicePartnership/tmp108/compare/v0.6.0...v0.7.0) - 2026-10-02
+
+### Added
+
+- [**breaking**] remove probe()
+- add read_configuration_and_acknowledge for FL/FH-preserving reads
+- supervise a complete one-shot acquisition
+- *(alert)* report which threshold was crossed
+
+### Fixed
+
+- stop deleting the blocking sensor traits when async is enabled
+- [**breaking**] make one_shot() acquire a sample, not just trigger one
+- do not retrigger a one-shot on reconfiguration
+- [**breaking**] decode M = 0b11 as continuous mode
+- *(alert)* retain an acknowledged event when the sample read fails
+- *(alert)* report an already-latched alert
+- *(ddsl)* declare power-on reset values for THIGH and TLOW
+
+### Other
+
+- pin Celsius's Display and ordering
+- mirror the limit-register reset assertions on the async driver
+- stop promising continuous() unconditionally shuts the chip down
+- pin continuous()'s entry-failure path
+- pin the rounding ties and rejection boundaries
+- pin the hysteresis band edges as measured
+- assert the application note's worked temperature values
+- give the temperature decoder an independent oracle
+- assert configuration layout against wire bytes
+- pin wait_for_temperature's read-delay-read ordering
+- pin the conversion period for every conversion rate
+- record timeline delays in microseconds
+- move conversion_period_us into the shared ops module
+- *(readme)* note that any configuration read acknowledges an alert
+- note that configuration reads acknowledge in interrupt mode
+- mark feature-gated items with doc(cfg) badges
+- resolve the intra-doc links that break on a default-feature build
+- *(deps)* bump device-driver from 2.1.0 to 2.1.1
+- make the one-shot example actually perform a one-shot
+- stop pointing callers at a bare one_shot for fresh reads
+- Bump embedded-sensors-hal-async from 0.3.0 to 0.4.0
+- Bump tokio from 1.52.3 to 1.53.1
+- Bump embedded-sensors-hal from 0.1.0 to 0.1.1
+- *(readme)* scope the alert-cause caveat to the scalar waiter
+- Update comments in apply_config for clarity
+- give the empty-GPIO assertions their reasons
+- record async timeline events on poll, not construction
+- *(alert)* document retained delivery after a failed sample read
+- correct the documented alert contract
+- Bump pico de gallo dependencies
+
 ### Breaking
 
 - `Mode` decoding is now total (#62). Both `M = 0b10` and `M = 0b11`
