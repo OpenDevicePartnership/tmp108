@@ -305,6 +305,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
 dependencies = [
  "hash32 0.3.1",
+ "serde_core",
  "stable_deref_trait",
 ]
 
@@ -534,15 +535,15 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pico-de-gallo-hal"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a5fccb5566578ce4edcfbdb33306a0038daae56501792e1affa65725af201e8"
+checksum = "0027585e54702b20f0317705abbd90fe23c017e89bbe69ddbde79fcf67089ff8"
 dependencies = [
  "embedded-hal 1.0.0",
  "embedded-hal-async",
  "embedded-io 0.6.1",
  "embedded-io-async",
- "pico-de-gallo-lib",
+ "pico-de-gallo-lib 0.9.0",
  "tokio",
 ]
 
@@ -559,6 +560,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pico-de-gallo-internal"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6106cce1a8de9da256d8db4d2acb3d39c506b0a9da0c86eb271278c88e338e82"
+dependencies = [
+ "heapless 0.9.3",
+ "postcard",
+ "postcard-rpc",
+ "postcard-schema",
+ "serde",
+]
+
+[[package]]
 name = "pico-de-gallo-lib"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -566,8 +580,22 @@ checksum = "f87a39f1b7fa81a949b08bf27a986296c1e3e7617e3b30f39a72e7ba9ef9b3b3"
 dependencies = [
  "embedded-hal 1.0.0",
  "nusb",
- "pico-de-gallo-internal",
+ "pico-de-gallo-internal 0.7.0",
  "postcard-rpc",
+ "tokio",
+]
+
+[[package]]
+name = "pico-de-gallo-lib"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36079bca7c84aa4e88407c7e78573e235ae03a4aed1235143b7e9ab851d60fb3"
+dependencies = [
+ "embedded-hal 1.0.0",
+ "nusb",
+ "pico-de-gallo-internal 0.8.0",
+ "postcard-rpc",
+ "serde",
  "tokio",
 ]
 
@@ -653,6 +681,7 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9475666d89f42231a0a57da32d5f6ca7f9b5cd4c335ea1fe8f3278215b7a21ff"
 dependencies = [
+ "heapless 0.9.3",
  "postcard-derive",
  "serde",
 ]
@@ -873,7 +902,7 @@ dependencies = [
  "embedded-sensors-hal",
  "embedded-sensors-hal-async",
  "pico-de-gallo-hal",
- "pico-de-gallo-lib",
+ "pico-de-gallo-lib 0.8.0",
  "tokio",
 ]
 
