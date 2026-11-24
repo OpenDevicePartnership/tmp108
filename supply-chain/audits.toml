@@ -127,6 +127,11 @@ criteria = "safe-to-run"
 version = "0.9.3"
 notes = "no_std static-friendly collections (Vec, String, Deque, etc.), pulled in transitively by postcard-rpc 0.12. Extensive unsafe for in-place buffer management and atomic operations (inherent to a no-alloc collections crate); no network/fs/process access. build.rs only emits `cargo::rustc-cfg=arm_llsc`/`has_atomic_load_store` based on target triple, no codegen or external commands. Assisted-by: opencode:claude-opus-4.7-1m-internal"
 
+[[audits.heapless]]
+who = "Felipe Balbi <felipe.balbi@microsoft.com>"
+criteria = "safe-to-run"
+delta = "0.9.3 -> 0.9.4"
+
 [[audits.io-kit-sys]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-run"
@@ -204,6 +209,11 @@ who = "Felipe Balbi <felipe@balbi.sh>"
 criteria = "safe-to-run"
 delta = "0.1.0 -> 0.5.0"
 notes = "Async client wrapping postcard-rpc + nusb for the Pico de Gallo USB bridge. Adds OneWire/UART/ADC/PWM/PWM-channel/SPI-device APIs matching pico-de-gallo-internal. Still no unsafe in src/, no build script. USB transport only; no direct net/fs/process. Assisted-by: opencode:claude-opus-4.7-1m-internal"
+
+[[audits.postcard]]
+who = "Felipe Balbi <felipe.balbi@microsoft.com>"
+criteria = "safe-to-run"
+delta = "1.1.3 -> 1.2.0"
 
 [[audits.postcard-derive]]
 who = "Jerry Xie <jerryxie@microsoft.com>"
