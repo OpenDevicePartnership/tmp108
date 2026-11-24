@@ -8,7 +8,6 @@ description = "Platform-agnostic Rust driver for the TMP108 temperature sensor."
 readme = "README.md"
 keywords = ["temperature", "sensor", "i2c", "driver", "embedded-hal-driver"]
 categories = ["embedded", "hardware-support", "no-std"]
-homepage = "https://github.com/OpenDevicePartnership/tmp108"
 documentation = "https://docs.rs/tmp108"
 include = [
 	"/**/*.rs",
@@ -41,7 +40,7 @@ assert_approx_eq = "1.1.0"
 embedded-hal-mock = { version = "0.11.1", features = [ "embedded-hal-async" ] }
 pico-de-gallo-hal = "0.7.0"
 pico-de-gallo-lib = "0.8.0"
-tokio = { version = "1.47.0", features = ["rt", "macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.53.3", features = ["rt", "macros", "rt-multi-thread", "time"] }
 
 [lints.rust]
 unsafe_code = "deny"

@@ -161,6 +161,13 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
+[[publisher.tokio]]
+version = "1.53.3"
+when = "2026-10-13"
+user-id = 6741
+user-login = "Darksonn"
+user-name = "Alice Ryhl"
+
 [[publisher.unicode-ident]]
 version = "1.0.20"
 when = "2025-10-21"
@@ -385,20 +392,6 @@ who = "Jerry Xie <jerryxie@microsoft.com>"
 criteria = "safe-to-deploy"
 version = "0.6.1"
 notes = "No unsafe. Build script only detects nightly via rustc --version. Pure async trait definitions for embedded I/O. Assisted-by: copilot-cli:claude-opus-4.6"
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.embedded-sensors-hal]]
-who = "Kurtis Dinelle <kdinelle@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.1.0"
-notes = "ODP crates are always trusted."
-aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
-
-[[audits.OpenDevicePartnership.audits.embedded-sensors-hal-async]]
-who = "Kurtis Dinelle <kdinelle@microsoft.com>"
-criteria = "safe-to-deploy"
-version = "0.3.0"
-notes = "ODP crates are always trusted."
 aggregated-from = "https://raw.githubusercontent.com/OpenDevicePartnership/embedded-services/refs/heads/main/supply-chain/audits.toml"
 
 [[audits.OpenDevicePartnership.audits.errno]]
