@@ -6,6 +6,13 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1](https://github.com/OpenDevicePartnership/tmp108/compare/v0.7.0...v0.7.1) - 2026-11-24
+
+### Other
+
+- update dependencies ([#92](https://github.com/OpenDevicePartnership/tmp108/pull/92))
+- Update cargo vet ([#90](https://github.com/OpenDevicePartnership/tmp108/pull/90))
+
 ## [0.7.0](https://github.com/OpenDevicePartnership/tmp108/compare/v0.6.0...v0.7.0) - 2026-10-02
 
 ### Added
