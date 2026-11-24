@@ -105,18 +105,18 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.pico-de-gallo-hal]]
-version = "0.7.0"
-when = "2026-08-27"
+version = "0.8.0"
+when = "2026-11-09"
 trusted-publisher = "github:OpenDevicePartnership/pico-de-gallo"
 
 [[publisher.pico-de-gallo-internal]]
-version = "0.7.0"
-when = "2026-08-27"
+version = "0.8.0"
+when = "2026-11-09"
 trusted-publisher = "github:OpenDevicePartnership/pico-de-gallo"
 
 [[publisher.pico-de-gallo-lib]]
-version = "0.8.0"
-when = "2026-08-27"
+version = "0.9.0"
+when = "2026-11-09"
 trusted-publisher = "github:OpenDevicePartnership/pico-de-gallo"
 
 [[publisher.proc-macro2]]
@@ -162,8 +162,8 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.tokio]]
-version = "1.53.3"
-when = "2026-10-13"
+version = "1.54.1"
+when = "2026-10-21"
 user-id = 6741
 user-login = "Darksonn"
 user-name = "Alice Ryhl"

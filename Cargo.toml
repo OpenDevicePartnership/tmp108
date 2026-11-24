@@ -38,9 +38,9 @@ embedded-sensors-hal-async = [ "dep:embedded-sensors-hal-async", "async" ]
 anyhow = "1.0.100"
 assert_approx_eq = "1.1.0"
 embedded-hal-mock = { version = "0.11.1", features = [ "embedded-hal-async" ] }
-pico-de-gallo-hal = "0.7.0"
-pico-de-gallo-lib = "0.8.0"
-tokio = { version = "1.53.3", features = ["rt", "macros", "rt-multi-thread", "time"] }
+pico-de-gallo-hal = "0.8.0"
+pico-de-gallo-lib = "0.9.0"
+tokio = { version = "1.54.1", features = ["rt", "macros", "rt-multi-thread", "time"] }
 
 [lints.rust]
 unsafe_code = "deny"
